@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Guide — Switch Access</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #EFEADE;
+    color: #1a1a2e;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overflow: hidden;
+  }
+
+  .slide {
+    display: none;
+    width: 100%;
+    max-width: 600px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .slide.active { display: flex; }
+
+  .slide .icon {
+    font-size: clamp(5rem, 20vw, 8rem);
+    margin-bottom: 16px;
+    line-height: 1;
+  }
+
+  .slide h2 {
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+
+  .slide p {
+    font-size: clamp(1rem, 3.5vw, 1.3rem);
+    color: #555;
+    line-height: 1.6;
+    max-width: 480px;
+  }
+
+  .slide p strong { color: #4A7BC4; }
+  .slide .emph { color: #C8934A; font-weight: 700; }
+
+  .demo-box {
+    background: #fff;
+    border: 3px solid #4A7BC4;
+    border-radius: 20px;
+    padding: 24px;
+    margin: 16px 0;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  .demo-box .demo-icon { font-size: 3rem; margin-bottom: 8px; }
+  .demo-box .demo-label {
+    font-size: clamp(1rem, 3.5vw, 1.3rem);
+    font-weight: 700;
+    color: #4A7BC4;
+    margin-bottom: 4px;
+  }
+  .demo-box .demo-sub { font-size: 0.9rem; color: #888; }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 400px;
+    margin: 12px 0;
+  }
+  .tool-item {
+    background: #fff;
+    border: 2px solid #e0dcd0;
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .tool-item .t-icon { font-size: 2.2rem; }
+  .tool-item .t-name { font-size: 0.85rem; font-weight: 700; color: #4A7BC4; margin-top: 4px; }
+
+  /* === NAV === */
+  .nav-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(transparent, rgba(239,234,222,0.95) 40%);
+    pointer-events: none;
+  }
+  .nav-area > * { pointer-events: auto; }
+
+  .nav-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .nav-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #d0ccc0;
+    transition: all 0.2s;
+  }
+  .nav-dot.active { background: #4A7BC4; width: 28px; border-radius: 5px; }
+
+  .nav-hint {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #A0927A;
+    font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+    animation: pulse 2s ease-in-out infinite;
+    text-align: center;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  .nav-skip {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    padding: 8px 18px;
+    background: #e0dcd0;
+    border: 2px solid #d0ccc0;
+    border-radius: 20px;
+    color: #777;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    text-decoration: none;
+  }
+  .nav-skip:active { background: #d5d1c5; }
+
+  .hold-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 6px; background: transparent; z-index: 60; pointer-events: none;
+  }
+  .hold-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #FFD700, #FF5722);
+    transition: width 0.1s linear;
+    border-radius: 0 3px 3px 0;
+  }
+  .hold-status {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 0.9rem; color: #FFD700; z-index: 60; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  .hold-status.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<a class="nav-skip" href="index.html" style="text-decoration:none">✕ Skip</a>
+
+<!-- SLIDE 1: Welcome -->
+<div class="slide active" id="slide0">
+  <div class="icon">👋</div>
+  <h2>Welcome to Switch Access</h2>
+  <p>
+    These tools let someone use a computer or iPad with <strong>just one switch</strong>.
+    A switch can be a button, a tap, or any key on a keyboard.
+  </p>
+  <div class="demo-box" style="margin-top:20px;border-color:#EFEADE;background:#4A7BC4;color:#fff">
+    <div class="demo-label" style="color:#fff">Tap or press any key to continue</div>
+  </div>
+</div>
+
+<!-- SLIDE 2: On iPad -->
+<div class="slide" id="slide1">
+  <div class="icon">👆</div>
+  <h2>On iPad (Touch)</h2>
+  <p>The whole screen is your switch. No hunting for buttons.<br><br></p>
+  <div class="demo-box">
+    <div class="demo-icon">👆</div>
+    <div class="demo-label">Quick Tap</div>
+    <div class="demo-sub">→ Pick something / Do it</div>
+  </div>
+  <div class="demo-box" style="border-color:#C8934A">
+    <div class="demo-icon">✋</div>
+    <div class="demo-label" style="color:#C8934A">Hold 2 Seconds</div>
+    <div class="demo-sub">→ Cancel / Go back</div>
+  </div>
+  <div class="demo-box" style="border-color:#d44">
+    <div class="demo-icon">✋</div>
+    <div class="demo-label" style="color:#d44">Hold 10 Seconds</div>
+    <div class="demo-sub">→ Go to the main menu</div>
+  </div>
+</div>
+
+<!-- SLIDE 3: On Computer -->
+<div class="slide" id="slide2">
+  <div class="icon">⌨️</div>
+  <h2>On a Computer</h2>
+  <p>Press <strong>any key</strong> to make a choice.<br>Press <strong class="emph">Escape</strong> to go back.<br><br>That's it. Space, Enter, letters — they all work.</p>
+  <div class="demo-box" style="border-color:#C8934A">
+    <div class="demo-icon">⌨️</div>
+    <div class="demo-label" style="color:#C8934A">Any key = Select</div>
+    <div class="demo-sub">Except Escape. Escape = Back.</div>
+  </div>
+</div>
+
+<!-- SLIDE 4: The Tools -->
+<div class="slide" id="slide3">
+  <div class="icon">🧰</div>
+  <h2>The Tools</h2>
+  <p>Each tool is a big button on the main screen.</p>
+  <div class="tool-grid">
+    <div class="tool-item"><div class="t-icon">⌨️</div><div class="t-name">Type</div><div style="font-size:0.7rem;color:#999">AAC keyboard</div></div>
+    <div class="tool-item"><div class="t-icon">🔢</div><div class="t-name">Calc</div><div style="font-size:0.7rem;color:#999">Calculator</div></div>
+    <div class="tool-item"><div class="t-icon">🎈</div><div class="t-name">Pop!</div><div style="font-size:0.7rem;color:#999">Pop balloons</div></div>
+    <div class="tool-item"><div class="t-icon">🤔</div><div class="t-name">Pick</div><div style="font-size:0.7rem;color:#999">Choose favorites</div></div>
+    <div class="tool-item" style="grid-column:1/-1"><div class="t-icon">🎯</div><div class="t-name">Tap</div><div style="font-size:0.7rem;color:#999">Reaction game</div></div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Ready -->
+<div class="slide" id="slide4">
+  <div class="icon">🚀</div>
+  <h2>Ready to try it?</h2>
+  <p>Tap below or press any key to open the main menu.<br><br>
+  Remember: <strong>tap or press any key</strong> to make a choice.<br>
+  <strong class="emph">Hold 2 seconds</strong> or press <strong class="emph">Escape</strong> to go back.</p>
+  <div style="margin-top:20px">
+    <a href="index.html" style="display:inline-block;padding:16px 48px;background:#4A7BC4;color:#fff;border-radius:60px;font-size:1.3rem;font-weight:700;text-decoration:none;touch-action:manipulation">Let's Go!</a>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div class="nav-hint" id="navHint">👆 Tap or press any key</div>
+<div class="nav-area">
+  <div class="nav-dots" id="navDots">
+    <span class="nav-dot active"></span>
+    <span class="nav-dot"></span>
+    <span class="nav-dot"></span>
+    <span class="nav-dot"></span>
+    <span class="nav-dot"></span>
+  </div>
+</div>
+
+<div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+const SLIDES = 5;
+let currentSlide = 0;
+let speaking = false;
+
+// ============================================================
+// TTS
+// ============================================================
+function speakSlide(idx) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const text = getSlideText(idx);
+  if (!text) return;
+  const u = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g, '').replace(/[\n]+/g, ' '));
+  u.rate = 0.85;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+  speaking = true;
+  u.onend = () => { speaking = false; };
+  u.onerror = () => { speaking = false; };
+  window.speechSynthesis.speak(u);
+}
+
+function getSlideText(idx) {
+  const texts = [
+    'Welcome to Switch Access. These tools let someone use a computer or iPad with just one switch. A switch can be a button, a tap, or any key on a keyboard. Tap or press any key to continue.',
+    'On iPad, the whole screen is your switch. Quick tap to pick something. Hold 2 seconds to cancel or go back. Hold 10 seconds to go to the main menu.',
+    'On a computer, press any key to make a choice. Space, Enter, letters — they all work. Press Escape to go back.',
+    'The main screen has five tools. Type lets you write with an AAC keyboard. Calc is a calculator. Pop pops balloons. Pick lets you choose favorites. Tap is a reaction game.',
+    'Ready to try it? Tap the button or press any key to open the main menu. Remember: tap or press any key to make a choice. Hold 2 seconds or press Escape to go back.'
+  ];
+  return texts[idx] || '';
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goToSlide(idx) {
+  if (idx < 0 || idx >= SLIDES) return;
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  document.getElementById('slide' + idx).classList.add('active');
+  document.querySelectorAll('.nav-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+  currentSlide = idx;
+  // Update hint
+  const hint = document.getElementById('navHint');
+  if (idx === SLIDES - 1) {
+    hint.textContent = '👆 Tap the button or press any key';
+  } else {
+    hint.textContent = '👆 Tap or press any key to continue';
+  }
+  // Speak
+  setTimeout(() => speakSlide(idx), 300);
+}
+
+function nextSlide() {
+  if (currentSlide < SLIDES - 1) {
+    goToSlide(currentSlide + 1);
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+function handleAction() {
+  if (currentSlide === SLIDES - 1) {
+    window.location.href = 'index.html';
+  } else {
+    nextSlide();
+  }
+}
+
+// ============================================================
+// TOUCH / KEYBOARD
+// ============================================================
+// Any touch = next (except on links)
+document.documentElement.addEventListener('touchstart', function(e) {
+  if (e.target.closest('a')) return;
+  e.preventDefault();
+  handleAction();
+}, { passive: false });
+
+// Any key except Escape = next
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
+  handleAction();
+});
+
+// ============================================================
+// AUTO-START
+// ============================================================
+// Start TTS after short delay
+setTimeout(() => speakSlide(0), 500);
+</script>
+</body>
+</html>

@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Type</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --text: #1a1a2e;
+    --key: #fff;
+    --key-border: #d0d5e0;
+    --scan-row: #4facfe;
+    --scan-col: #43e97b;
+    --pred: #764ba2;
+    --action: #f5576c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 800px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === TEXT DISPLAY === */
+  .text-area {
+    background: #fff;
+    border: 3px solid #e0e4ee;
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    min-height: 80px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .text-display {
+    font-size: clamp(1.3rem, 5vw, 2rem);
+    line-height: 1.5;
+    min-height: 48px;
+    word-wrap: break-word;
+    outline: none;
+    font-weight: 500;
+  }
+  .text-display:empty::before {
+    content: "Type...";
+    color: #bbb;
+    font-weight: 400;
+  }
+
+  .text-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .text-actions button {
+    background: #eef1f8;
+    border: none;
+    color: #555;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    touch-action: manipulation;
+  }
+  .text-actions button:active { background: #dde2ee; }
+  .text-actions .speak-btn { background: #43e97b; color: #fff; }
+  .text-actions .speak-btn:active { background: #38d06a; }
+  .text-actions .clear-btn { background: #f5576c; color: #fff; }
+  .text-actions .clear-btn:active { background: #d94a5c; }
+
+  /* === SCAN STATUS BAR === */
+  .scan-bar {
+    height: 4px;
+    background: #e0e4ee;
+    border-radius: 2px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+  .scan-bar.active { background: var(--scan-row); }
+  .scan-bar.col { background: var(--scan-col); }
+
+  /* === PREDICTIONS === */
+  .predictions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    min-height: 48px;
+    justify-content: center;
+  }
+  .pred-btn {
+    flex: 1;
+    max-width: 180px;
+    padding: 8px;
+    background: #fff;
+    border: 3px solid #d0d5e0;
+    border-radius: 12px;
+    color: var(--text);
+    font-size: clamp(1rem, 4vw, 1.3rem);
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .pred-btn:active { background: #eef1f8; }
+  .pred-btn .badge { font-size: 0.65rem; color: #999; font-weight: 400; display: block; margin-top: 2px; }
+
+  /* === KEYBOARD GRID === */
+  .keyboard {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    flex: 1;
+    align-content: start;
+  }
+
+  .key {
+    padding: 16px 4px;
+    background: var(--key);
+    border: 3px solid var(--key-border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+    font-weight: 600;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .key:active { transform: scale(0.95); }
+
+  .key.scan-row {
+    border-color: var(--scan-row);
+    background: #e8f4ff;
+    box-shadow: 0 0 16px rgba(79,172,254,0.3);
+  }
+  .key.scan-col {
+    border-color: var(--scan-col);
+    background: #e8ffe8;
+    box-shadow: 0 0 20px rgba(67,233,123,0.4);
+    transform: scale(1.03);
+  }
+
+  .key.action {
+    background: #f5576c;
+    border-color: #f5576c;
+    color: #fff;
+    font-size: clamp(1.3rem, 4.5vw, 1.8rem);
+  }
+
+  .key.space { grid-column: span 2; }
+
+  /* === LAYER SWITCH === */
+  .layers {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    justify-content: center;
+  }
+  .layers button {
+    flex: 1;
+    max-width: 120px;
+    padding: 8px;
+    background: #eef1f8;
+    border: 3px solid #d0d5e0;
+    border-radius: 10px;
+    color: #777;
+    cursor: pointer;
+    font-size: clamp(0.85rem, 3vw, 1rem);
+    font-weight: 700;
+    touch-action: manipulation;
+  }
+  .layers button.active {
+    background: var(--text);
+    border-color: var(--text);
+    color: #fff;
+  }
+  .layers button:active { transform: scale(0.95); }
+
+  @media (max-width: 500px) {
+    body { padding: 4px; }
+    .key { padding: 12px 2px; min-height: 48px; gap: 4px; }
+    .text-area { padding: 10px 14px; min-height: 70px; }
+  }
+
+  /* === SETTINGS DIALOG (big, simple, scanable) === */
+  .settings-dialog {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .settings-dialog.active { display: flex; }
+
+  .settings-panel {
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+    width: 100%;
+    max-width: 380px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .settings-panel h3 {
+    text-align: center;
+    font-size: clamp(1.1rem, 4vw, 1.3rem);
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .setting-opt {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 6px;
+    border: 3px solid #e0e4ee;
+    border-radius: 14px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.12s;
+    background: #fafbfc;
+  }
+  .setting-opt .lbl { font-size: clamp(0.9rem, 3.5vw, 1.1rem); font-weight: 600; color: #444; }
+  .setting-opt .val { font-size: clamp(0.9rem, 3.5vw, 1.1rem); font-weight: 700; color: var(--text); }
+  .setting-opt.scanning {
+    border-color: var(--scan-row);
+    background: #e8f4ff;
+    box-shadow: 0 0 16px rgba(79,172,254,0.3);
+    transform: scale(1.02);
+  }
+  .setting-opt.on { border-color: #43e97b; background: #e8ffe8; }
+  .setting-opt.off { border-color: #f5576c; background: #ffe8ea; }
+
+  /* === HELP BUTTON === */
+  .help-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #e0e4ee;
+    border: 2px solid #d0d5e0;
+    color: #555;
+    font-size: 1.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 50;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:active { background: #d0d4e0; }
+
+  /* === HELP OVERLAY === */
+  .help-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .help-overlay.show { display: flex; }
+
+  .help-box {
+    background: #fff;
+    border-radius: 24px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .help-box h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: 700;
+  }
+  .help-section { margin-bottom: 18px; }
+  .help-section .title {
+    font-weight: 700;
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .help-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f5f6fa;
+    border-radius: 14px;
+    margin-bottom: 6px;
+  }
+  .help-row .gesture {
+    font-size: 1.8rem;
+    min-width: 44px;
+    text-align: center;
+  }
+  .help-row .arrow {
+    color: #bbb;
+    font-size: 1.2rem;
+    font-weight: 300;
+  }
+  .help-row .desc {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+  }
+  .help-row .desc-sub {
+    font-size: 0.85rem;
+    color: #999;
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .help-close {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+    text-align: center;
+  }
+  .help-close:active { background: #555; }
+
+  /* === HOLD BAR === */
+  .hold-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 6px;
+    background: transparent;
+    z-index: 60;
+    pointer-events: none;
+  }
+  .hold-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #FFD700, #FF5722);
+    transition: width 0.1s linear;
+    border-radius: 0 3px 3px 0;
+  }
+  .hold-status {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    color: #FFD700;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  .hold-status.show { opacity: 1; }
+</style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <!-- Text Output -->
+  <div class="text-area">
+    <div class="text-display" id="textDisplay"></div>
+    <div class="text-actions">
+      <button class="speak-btn" onclick="speakText()">🔊 Speak</button>
+      <button class="clear-btn" onclick="clearText()">✕</button>
+    </div>
+  </div>
+
+  <!-- Scan Status Bar -->
+  <div class="scan-bar" id="scanBar"></div>
+
+  <!-- Predictions -->
+  <div class="predictions" id="predictions"></div>
+
+  <!-- Layer Switcher -->
+  <div class="layers">
+    <button class="active" data-layer="letters" onclick="switchLayer('letters')">ABC</button>
+    <button data-layer="numbers" onclick="switchLayer('numbers')">123</button>
+    <button data-layer="symbols" onclick="switchLayer('symbols')">#+=</button>
+  </div>
+
+  <!-- Keyboard Grid -->
+  <div class="keyboard" id="keyboard"></div>
+</div>
+
+<button class="help-btn" id="helpBtn" onclick="showHelp()">?</button>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h2>How To Use</h2>
+    <div class="help-section">
+      <div class="title">👆 Touch (iPad)</div>
+      <div class="help-row">
+        <span class="gesture">👆</span>
+        <span class="arrow">→</span>
+        <span class="desc">Tap <span class="desc-sub">quick</span></span>
+      </div>
+      <div class="help-row">
+        <span class="gesture">✋</span>
+        <span class="arrow">→</span>
+        <span class="desc">Hold <span class="desc-sub">2s</span></span>
+      </div>
+      <div class="help-row">
+        <span class="gesture">✋</span>
+        <span class="arrow">→</span>
+        <span class="desc">Hold <span class="desc-sub">10s</span></span>
+      </div>
+    </div>
+    <div class="help-section">
+      <div class="title">⌨️ Keyboard</div>
+      <div class="help-row">
+        <span class="gesture">␣/↵</span>
+        <span class="arrow">→</span>
+        <span class="desc">Select</span>
+      </div>
+      <div class="help-row">
+        <span class="gesture">Esc</span>
+        <span class="arrow">→</span>
+        <span class="desc">Back</span>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:12px">
+      <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a>
+    </div>
+    <button class="help-close" onclick="hideHelp()">Got it</button>
+  </div>
+</div>
+
+<!-- Hold bar -->
+<div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<!-- Settings Dialog -->
+<div class="settings-dialog" id="settingsDialog">
+  <div class="settings-panel" id="settingsPanel"></div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  text: '',
+  layer: 'letters',
+  scanSpeed: 1200,
+  scanMode: 'row',
+  scanning: true,
+  currentRow: 0,
+  currentCol: 0,
+  selectedRow: -1,
+  predictionIndex: -1,
+  aiEnabled: false,
+  speakOnType: false,
+  holdCancel: 2,
+  holdExit: 10,
+  inSettings: false,
+  settingsCursor: 0,
+  scanTimer: null,
+};
+
+// ============================================================
+// KEYBOARD LAYOUTS
+// ============================================================
+const LAYERS = {
+  letters: {
+    keys: [
+      ['e','t','a','o','i','n'],
+      ['s','h','r','d','l','c'],
+      ['u','m','w','f','g','y'],
+      ['p','b','v','k','j','x'],
+      ['q','z','.',',','!','?'],
+    ],
+    rows: 5, cols: 6,
+  },
+  numbers: {
+    keys: [
+      ['1','2','3','4','5','6'],
+      ['7','8','9','0','+','-'],
+      ['$','€','£','¥','%','×'],
+    ],
+    rows: 3, cols: 6,
+  },
+  symbols: {
+    keys: [
+      ['@','#','&','*','(',')'],
+      ['[',']','{','}','<','>'],
+      ['/','\\','|','_',':',';'],
+      ["'",'"','`','~','^','='],
+    ],
+    rows: 4, cols: 6,
+  }
+};
+
+// ============================================================
+// WORD PREDICTION — top ~2000 common words
+// ============================================================
+const COMMON_WORDS = [
+  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at',
+  'this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there',
+  'their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no',
+  'just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then',
+  'now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well',
+  'way','even','new','want','because','any','these','give','day','most','us','great','say','each','tell','very',
+  'here','call','ask','need','feel','house','try','help','around','too','still','last','long','show','much','before',
+  'turn','play','though','real','best','right','through','own','put','thing','place','end','hand','big','high',
+  'might','such','old','while','off','same','let','number','open','live','walk','start','always','next','something',
+  'night','point','small','head','stand','own','home','found','should','seem','side','man','move','world','letter',
+  'mother','answer','follow','father','again','change','never','between','different','away','another',
+  'three','learn','school','state','family','group','always','keep','children','begin','country','city','run',
+  'set','example','door','dark','hard','light','morning','music','power','room','white','young','face','food',
+  'often','body','close','far','open','child','earth','form','hand','enough','woman','car','watch','free',
+  'second','water','course','area','during','leave','together','company','money','service','friend',
+  'important','love','person','business','information','question','word','program','need','paper','minute',
+  'thing','line','government','part','number','case','week','problem','fact','system',
+  'member','community','picture','support','report','special','five','local','early','field','interest','public',
+  'office','plan','resource','experience','result','moment','practice','study','center','book','order','art',
+  'nature','subject','design','space','class','control','value','science','able','allow','produce','lead',
+  'continue','add','develop','include','several','present','position','realize','create','provide','process',
+  'consider','figure','remember','hold','produce','hear','happen','write','sit','stand','lose','pay','meet',
+  'include','continue','set','learn','change','lead','understand','watch','follow','stop','create','speak',
+  'read','allow','add','spend','grow','open','walk','win','teach','offer','remember','love','consider','appear',
+  'buy','wait','serve','die','send','expect','build','stay','fall','cut','reach','kill','remain','suggest',
+  'raise','pass','sell','require','report','decide','pull','carry','hope','discuss','return','explain','support',
+  'push','accept','agree','choose','demand','smile','draw','drop','finish','save','mark','sign','drink',
+  'occur','paint','thank','affect','respond','suppose','escape','display','share','fill','pick','wonder',
+  'identify','receive','describe','protect','threaten','collect','prepare','perform','manage','determine',
+  'establish','achieve','recognize','indicate','represent','claim','reduce','relate','refer','reflect','replace',
+  'demonstrate','discuss','distinguish','contribute','emerge','engage','improve','introduce','investigate',
+  'maintain','pursue','reveal','transform','adopt','confirm','criticize','define','express','implement',
+  'interpret','participate','promote','publish','strengthen','summarize','undermine','assess','clarify',
+  'comprise','conceive','constitute','construct','convey','cultivate','devise','diminish','disclose','display',
+  'dissolve','dominate','elaborate','eliminate','embrace','enable','encompass','enforce','enhance','envision',
+  'evaluate','examine','exceed','execute','expand','exploit','explore','facilitate','formulate','foster',
+  'generate','highlight','hypothesize','illustrate','immerse','incorporate','initiate','innovate','inspect',
+  'integrate','intervene','isolate','justify','manipulate','maximize','minimize','monitor','negotiate','obtain',
+  'optimize','orchestrate','outline','overcome','overlook','perceive','persist','pinpoint','pioneer','portray',
+  'postulate','precede','prescribe','preserve','presume','prioritize','proclaim','profess','prohibit','project',
+  'propel','propose','prosper','protest','provoke','quantify','question','radiate','rationalize','reactivate',
+  'rebuild','reconsider','reconstruct','rectify','redesign','regulate','rehabilitate','reinforce','reinterpret',
+  'rejuvenate','remediate','reorganize','replicate','reproduce','reshape','resolve','restore','restructure',
+  'retain','retrieve','revitalize','revolutionize','scrutinize','simplify','stabilize','stimulate','streamline',
+  'substantiate','synthesize','systematize','troubleshoot','utilize','visualize','accommodate','accumulate',
+  'administer','advocate','alleviate','allocate','amplify','animate','anticipate','appreciate','articulate',
+  'assimilate','authorize','brainstorm','categorize','collaborate','commemorate','communicate','compensate',
+  'complement','complicate','comprehend','compromise','concentrate','conceptualize','confront','congregate',
+  'consolidate','contemplate','coordinate','correlate','corroborate','counteract','decentralize','decompose',
+  'dedicate','delegate','deliberate','demonopolize','depreciate','destabilize','deteriorate','determine',
+  'differentiate','discontinue','discriminate','disintegrate','disproportionate','disseminate','distribute',
+  'diversify','document','domesticate','duplicate','economize','editorialize','educate','effectuate',
+  'electrify','elevate','emancipate','empathize','empower','emulate','encapsulate','encompass','encourage',
+  'endanger','endorse','energize','engage','engineer','enhance','enlighten','enrich','envision',
+  'equalize','equilibrate','eradicate','escalate','establish','estimate','evacuate','evangelize','evaporate',
+  'exaggerate','excel','exchange','exclude','exemplify','exert','exhibit','exonerate','expedite','experiment',
+  'expire','explicate','expose','extend','exterminate','extinguish','extract','extrapolate','fabricate',
+  'familiarize','federate','fertilize','finalize','financier','flourish','fluctuate','forecast','formulate',
+  'fortify','fossilize','fractionalize','franchise','frequent','fructify','frustrate','fulfill','furnish',
+  'galvanize','garnish','generalize','generate','germinate','gestate','globalize','glorify','govern','graduate',
+  'gratify','gravitate','guarantee','habituate','harmonize','harness','hibernate','hierarchize','homogenize',
+  'horrify','humanize','humidify','hybridize','hypnotize','hypothesize','idealize','identify','ideologize',
+  'ignite','illuminate','illustrate','imagine','immerse','immobilize','immortalize','immunize','impair',
+  'impart','impede','implement','implicate','import','impose','impoverish','improvise','inaugurate','incarnate',
+  'incentivize','incinerate','incline','incorporate','increment','incubate','indemnify','indicate','indict',
+  'indoctrinate','induce','industrialize','infiltrate','inflame','inflate','inflect','influence','inform',
+  'infringe','infuse','inhabit','inhibit','initiate','inject','innovate','inoculate','input','inquire',
+  'inscribe','insert','insinuate','insist','inspect','inspire','install','instantiate','institute','instruct',
+  'insulate','insult','insure','integrate','intellectualize','intensify','interact','intercept','interchange',
+  'interconnect','interfere','interject','interlace','interlink','interlock','interlude','intermingle',
+  'intermittent','internalize','interpolate','interpret','interrelate','interrogate','interrupt','intersect',
+  'intertwine','intervene','interview','intimate','intimidate','intoxicate','introduce','intrude','intuit',
+  'inundate','invalidate','invent','inventory','invert','invest','investigate','invigorate','invite','invoke',
+  'involve','ionize','irradiate','irrigate','irritate','isolate','itemize','iterate',
+  'jeopardize','jettison','jubilate','judge','juggle','justify','juxtapose','kidnap','kindle','knit','label',
+  'labor','lament','laminar','landscape','languish','launch','launder','lavish','legislate','legitimize',
+  'lengthen','leverage','levitate','liberalize','liberate','license','lighten','limit',
+  'linger','liquidate','list','litigate','localize','locate','lodge',
+  'lubricate','lure','magnetize','magnify','maintain','manage','mandate',
+  'maneuver','manifest','manipulate','manufacture','map','marginalize','marinate','market','marshal',
+  'master','match','materialize','maximize','measure','mechanize','mediate','meditate',
+  'mellow','melt','memorize','menace','mention','mentor','merge','mesh',
+  'migrate','militarize','mimic','mince','mind','mingle',
+  'miniaturize','minimize','minister','moderate','modernize','modify','modulate','moisten','mold','monitor',
+  'monopolize','motivate','mount','mourn','move','muddle','muffle','multiply','murmur','muse',
+  'mutate','mystify','name','narrate','narrow','nationalize','navigate','necessitate',
+  'negate','negotiate','nest','net','network','neutralize',
+  'nominate','normalize','notice','notify','nourish','nurture','obey',
+  'observe','obsolete','obstruct','obtain','obviate','occasion','occupy','offend','offer',
+  'offset','operate','oppose','oppress','optimize','orchestrate','ordain','order','organize',
+  'orient','originate','ornament','oscillate','outline',
+  'outpace','outperform','outshine','outsmart','outsource',
+  'overcome','overflow','overhaul','overhear','overlap','overload','overlook','overrule','oversee',
+  'overtake','overthrow','overturn','overwhelm','owe','own',
+  'pace','pacify','pack','page','paint','pair','parade','parallel','paraphrase','pardon','parent',
+  'parse','participate','partner','pass','paste','pat','patch','pause','pave','pay',
+  'peek','peel','peer','penetrate','perceive','perfect','perform','permit',
+  'persist','personify','persuade','pertain','peruse','phase','phone','photograph','phrase','pick',
+  'picture','piece','pile','pin','pinpoint','pioneer','place','plan','plant','play',
+  'plead','please','pledge','plot','plug','plunge','point',
+  'polish','pollute','populate','portray','pose','position','possess','post','postpone',
+  'pour','practice','praise','pray','preach','precede','predict','prefer',
+  'prepare','prescribe','preserve','press','presume','pretend','prevail','prevent','preview',
+  'price','print','prioritize','probe','proceed','process','proclaim','procrastinate','procure','produce',
+  'program','progress','prohibit','project','proliferate','promise','promote',
+  'prompt','pronounce','proof','propagate','propel','propose','prosecute','prospect','prosper',
+  'protect','protest','prove','provide','provoke','pry','publish','pull','pump','punch',
+  'punish','purchase','purge','purify','pursue','push','put','puzzle',
+  'qualify','quantify','quarter','quash','query','question','queue','quicken','quiet','quit','quiz','quote',
+  'race','radiate','raise','rally','range','rank','rate','ratify','reach','react','read','ready',
+  'realign','realize','reap','reason','reassure','reboot','rebound','rebuild','recall','recap',
+  'receive','recite','reckon','reclaim','recognize','recommend','reconnect','reconsider','reconstruct',
+  'record','recover','recreate','recruit','rectify','recycle','redesign','reduce',
+  'refer','refine','reflect','reform','refresh','refund','refurbish','refuse','refute',
+  'regain','regard','register','regret','regroup','regulate','rehabilitate','rehearse',
+  'reimburse','reinforce','reinstall','reinvent','reiterate','reject','rejoice','relate','relax','relay',
+  'release','relieve','rely','remain','remake','remark','remedy','remember','remind','remix','remodel',
+  'remove','rename','render','renew','renovate','reopen','reorganize','repair','repeat','replace',
+  'replenish','replicate','reply','report','represent','reprint','reproduce',
+  'request','require','rescue','research','resemble','resent','reserve','reside','resign','resist',
+  'resolve','resonate','respect','respond','rest','restart','restore','restrain','restrict','restructure',
+  'result','resume','resurface','resurrect','retail','retain','retaliate','retire','retract','retrain',
+  'retreat','retrieve','return','reunite','reveal','reverse','revert','review','revise','revitalize',
+  'revive','revoke','revolt','revolutionize','revolve','reward','rewind','reword','rewrite',
+  'ride','ring','rinse','rip','ripple','rise','risk','rival','roam','roar','rob','rock','roll',
+  'root','rope','rot','rotate','rough','round','rouse','route','row','rub','ruin','rule',
+  'rumble','run','rush','rust','sabotage','sacrifice','safeguard','sail','satisfy','save',
+  'scare','scatter','schedule','score','scream','seal','search','secure','see','seek','select','sell',
+  'send','sense','separate','serve','set','settle','shade','shake','shape','share','shatter','shed',
+  'shelter','shift','shine','ship','shock','shoot','shop','shore','shorten','shout','show','shrink',
+  'shut','shuttle','sigh','sign','signal','simplify','simulate','sing','sink','sit','situate','size',
+  'sketch','skill','skip','slap','sleep','slice','slide','slip','slow','smash','smell','smile','smoke',
+  'smooth','snap','sneak','sneeze','sniff','soak','solve','soothe','sort','sound','source',
+  'sow','space','span','spark','sparkle','spawn','speak','specify','speed','spell','spend',
+  'spill','spin','spit','splash','split','spoil','sponsor','spot','spray','spread','spring','sprinkle',
+  'sprint','spur','squash','squeeze','stab','stabilize','stack','staff','stage','stagger','stain',
+  'stake','stall','stamp','stand','standardize','stare','start','startle','starve','state','station',
+  'stay','steady','steal','steam','steep','steer','stem','step','stereotype','stick','stiffen',
+  'stifle','stimulate','sting','stink','stir','stitch','stock','stoke','stop','store','storm','stow',
+  'straighten','strain','strand','stream','streamline','strengthen','stress','stretch','strike','string',
+  'strip','strive','stroke','structure','struggle','stuff','stumble','stun','style',
+  'subdue','subject','submit','subscribe','subsidize','substitute','subtract',
+  'succeed','suck','sue','suffer','suffice','suggest','suit','summarize','summon','supply','support',
+  'suppose','surge','surmount','surpass','surprise','surrender','surround','survey','survive',
+  'suspect','suspend','sustain','swallow','swamp','sway','swear','sweat','sweep','swell',
+  'swerve','swim','swing','switch','symbolize','sympathize','synchronize',
+  'synthesize','tackle','tag','tailor','take','talk','tally','tamper','tap','tape','target',
+  'taste','tax','teach','team','tear','tease','tell','tempt','tend','tense',
+  'term','terminate','terrify','test','testify','thank','thaw','theorize','thicken','think',
+  'thirst','thorough','thrash','thread','threaten','thrill','thrive','throttle','throw','thrust',
+  'thump','thunder','tick','ticket','tidy','tie','tighten','till','tilt','time','tingle','tint','tip',
+  'tire','toast','toggle','tolerate','tone','tool','top','topple','torch','torture',
+  'toss','total','touch','tour','tow','tower','trace','track','trade','traffic','trail',
+  'train','transfer','transform','transit','translate','transmit','transplant','transport','trap',
+  'trash','travel','treat','trek','tremble','trend','trial','trick','trigger','trim','trip',
+  'triumph','trouble','truck','trudge','trust','try','tuck','tug','tumble','tune','tunnel','turn',
+  'tutor','tweak','twist','type','ultimately','uncover','undergo','undermine',
+  'understand','undertake','undo','unfold','unify','unite','unlock','unpack','unravel',
+  'unveil','unwind','update','upgrade','uphold','uplift','upload','upset','urge','use',
+  'utilize','utter','vacate','validate','value','vanish','vary','vault',
+  'vent','venture','verify','vibrate','view','violate','visit','visualize',
+  'voice','volunteer','vote','vouch','vow','voyage',
+  'wade','wag','wage','wait','waive','wake','walk','wander','want','warm','warn','warp',
+  'wash','waste','watch','water','wave','waver','weaken','wear','weave',
+  'weed','weigh','welcome','weld','well','wet','wheel','whine','whip','whirl','whisper','whistle',
+  'widen','wield','win','wince','wind','wink','wipe','wire','wise','wish','withdraw','wither',
+  'withhold','withstand','witness','wobble','wonder','woo','word','work','worry','worsen',
+  'worship','wound','wrap','wreck','wrench','wrestle','wring','wrinkle','write',
+  'yawn','yearn','yell','yield','yoke','zap','zero','zigzag','zone','zoom',
+  'i','me','my','myself','we','our','ours','ourselves','you','your','yours','yourself','yourselves','he','him',
+  'his','himself','she','her','hers','herself','it','its','itself','they','them','their','theirs','themselves',
+  'what','which','who','whom','this','that','these','those','am','is','are','was','were','been','being','have',
+  'has','had','having','do','does','did','doing','would','could','should','may','might','shall','can','need',
+  'dare','ought','used','will','a','an','the','and','but','or','because','as','until','while','of','at','by',
+  'for','with','about','against','between','into','through','during','before','after','above','below','from',
+  'up','down','in','out','on','off','over','under','again','further','then','once','here','there','when',
+  'where','why','how','all','each','every','both','few','more','most','other','some','such','no','nor','not',
+  'only','own','same','so','than','very','just','because','but','and','or','if','though','while','until',
+  'after','before','when','unless','since','although','whether','however','therefore','thus','maybe',
+  'please','yes','no','hello','goodbye','thanks','sorry','please','help','stop','go','wait'
+];
+
+function buildTrie(words) {
+  const trie = {};
+  for (const word of words) {
+    let node = trie;
+    for (const ch of word.toLowerCase()) {
+      if (!node[ch]) node[ch] = {};
+      node = node[ch];
+    }
+    node.$ = true;
+  }
+  return trie;
+}
+
+function getPredictions(prefix, maxResults = 3) {
+  if (!prefix || prefix.length === 0) return [];
+  const lower = prefix.toLowerCase();
+  let node = TRIE;
+  for (const ch of lower) {
+    if (!node[ch]) return [];
+    node = node[ch];
+  }
+  const results = [];
+  function dfs(n, path) {
+    if (results.length >= maxResults) return;
+    if (n.$) results.push(prefix + path);
+    for (const ch of Object.keys(n).filter(k => k !== '$')) {
+      if (results.length >= maxResults) return;
+      dfs(n[ch], path + ch);
+    }
+  }
+  dfs(node, '');
+  return results.slice(0, maxResults);
+}
+
+const TRIE = buildTrie(COMMON_WORDS);
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderKeyboard() {
+  const kb = document.getElementById('keyboard');
+  const layer = LAYERS[state.layer];
+  let html = '';
+  for (let r = 0; r < layer.keys.length; r++) {
+    for (let c = 0; c < layer.keys[r].length; c++) {
+      const ch = layer.keys[r][c];
+      const cls = ['key'];
+      if (state.scanMode === 'row' && state.currentRow === r) cls.push('scan-row');
+      else if (state.scanMode === 'col' && state.selectedRow === r && state.currentCol === c) cls.push('scan-col');
+      html += `<div class="${cls.join(' ')}" onclick="pressKey('${ch}')">${ch}</div>`;
+    }
+  }
+  html += `<div class="key action ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="pressKey('BACKSPACE')">⌫</div>`;
+  html += `<div class="key action space ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="pressKey(' ')">Space</div>`;
+  html += `<div class="key action ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="pressKey('ENTER')">↵</div>`;
+  html += `<div class="key action ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="openSettings()">⚙</div>`;
+  kb.innerHTML = html;
+}
+
+function layerRows() { return LAYERS[state.layer].rows; }
+function layerCols() { return LAYERS[state.layer].cols; }
+function totalRows() { return layerRows() + 1; }
+
+// ============================================================
+// SCAN ENGINE
+// ============================================================
+function nextScanStep() {
+  if (!state.scanning) return;
+  if (state.scanMode === 'row') {
+    state.currentRow = (state.currentRow + 1) % totalRows();
+    state.currentCol = 0;
+  } else {
+    const cols = state.currentRow === layerRows() ? 4 : layerCols();
+    state.currentCol = (state.currentCol + 1) % cols;
+  }
+  updateUI();
+  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+}
+
+function startScan() {
+  stopScan();
+  state.scanning = true;
+  state.scanMode = 'row';
+  state.currentRow = 0;
+  state.currentCol = 0;
+  state.selectedRow = -1;
+  updateUI();
+  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+}
+
+function stopScan() {
+  state.scanning = false;
+  if (state.scanTimer) { clearTimeout(state.scanTimer); state.scanTimer = null; }
+  updateUI();
+}
+
+// ============================================================
+// SELECTION
+// ============================================================
+function selectCurrent() {
+  // Settings mode
+  if (state.inSettings) { selectSettingsOption(); return; }
+
+  if (!state.scanning) { startScan(); return; }
+
+  if (state.scanMode === 'row') {
+    state.selectedRow = state.currentRow;
+    state.scanMode = 'col';
+    state.currentCol = 0;
+    updateUI();
+    return;
+  }
+
+  if (state.scanMode === 'col') {
+    const row = state.selectedRow;
+    const col = state.currentCol;
+    if (row < layerRows()) {
+      const ch = LAYERS[state.layer].keys[row][col];
+      if (ch) typeChar(ch);
+    } else {
+      const actions = ['BACKSPACE', ' ', 'ENTER', 'SETTINGS'];
+      const action = actions[col] || ' ';
+      if (action === 'BACKSPACE') doBackspace();
+      else if (action === 'ENTER') typeChar('\n');
+      else if (action === 'SETTINGS') { openSettings(); return; }
+      else typeChar(' ');
+    }
+    state.scanMode = 'row';
+    state.selectedRow = -1;
+    state.currentRow = 0;
+    state.currentCol = 0;
+    updateUI();
+    updatePredictions();
+  }
+}
+
+function typeChar(ch) {
+  state.text += ch;
+  if (state.speakOnType) speakChar(ch);
+  updateText();
+  updatePredictions();
+  if (state.aiEnabled) checkAiPrediction();
+}
+
+function doBackspace() { state.text = state.text.slice(0, -1); updateText(); updatePredictions(); }
+function clearText() { state.text = ''; updateText(); updatePredictions(); }
+
+function pressKey(ch) {
+  if (ch === 'BACKSPACE') { doBackspace(); return; }
+  if (ch === 'ENTER') { typeChar('\n'); return; }
+  if (ch === 'SETTINGS') { openSettings(); return; }
+  typeChar(ch);
+}
+
+// ============================================================
+// PREDICTION
+// ============================================================
+function getCurrentWord() {
+  const matches = state.text.match(/(\w+)$/);
+  return matches ? matches[1] : '';
+}
+
+function updatePredictions() {
+  const container = document.getElementById('predictions');
+  const prefix = getCurrentWord();
+  if (!prefix || prefix.length === 0) { container.innerHTML = ''; return; }
+  const preds = getPredictions(prefix, 3);
+  container.innerHTML = preds.map((w, i) =>
+    `<div class="pred-btn" onclick="acceptPrediction('${w}')">${w}</div>`
+  ).join('');
+}
+
+function acceptPrediction(word) {
+  const prefix = getCurrentWord();
+  const suffix = word.slice(prefix.length);
+  state.text += suffix + ' ';
+  updateText();
+  updatePredictions();
+}
+
+// ============================================================
+// AI PREDICTION (Chrome Built-in AI)
+// ============================================================
+let aiSession = null;
+let aiAvailable = false;
+
+async function initBuiltInAI() {
+  try {
+    if (window.ai && window.ai.languageModel) {
+      const capabilities = await window.ai.languageModel.capabilities();
+      if (capabilities.available === 'readily' || capabilities.available === 'after-download') {
+        aiAvailable = true; return true;
+      }
+    }
+    if (window.ai && window.ai.canCreateTextSession) {
+      const status = await window.ai.canCreateTextSession();
+      if (status === 'readily' || status === 'after-download') {
+        aiAvailable = true; return true;
+      }
+    }
+  } catch(e) {}
+  aiAvailable = false; return false;
+}
+
+async function createAISession() {
+  try {
+    if (window.ai && window.ai.languageModel) {
+      aiSession = await window.ai.languageModel.create({
+        systemPrompt: 'Predict the 3 most likely next words. Return ONLY 3 comma-separated words.',
+        temperature: 0.3,
+        topK: 3
+      });
+    } else if (window.ai && window.ai.createTextSession) {
+      aiSession = await window.ai.createTextSession();
+    }
+    return !!aiSession;
+  } catch(e) { return false; }
+}
+
+function destroyAISession() {
+  if (aiSession) { try { aiSession.destroy(); } catch(e) {} aiSession = null; }
+}
+
+async function aiGetPredictions(prefix) {
+  if (!aiAvailable || !state.aiEnabled) return null;
+  try {
+    if (!aiSession) { const created = await createAISession(); if (!created) return null; }
+    let result;
+    if (aiSession.prompt) {
+      result = await aiSession.prompt(`Text: "${prefix}"`);
+    } else if (aiSession.execute) {
+      result = await aiSession.execute(`Complete: "${prefix}"`);
+    } else return null;
+    const words = result.split(',').map(w => w.trim().replace(/^[\d.\-\s]+/,'').replace(/["']/g,'').toLowerCase()).filter(w => w.startsWith(prefix.toLowerCase()) && w.length > prefix.length).slice(0,3);
+    return words.length > 0 ? words : null;
+  } catch(e) {
+    destroyAISession(); return null;
+  }
+}
+
+async function checkAiPrediction() {
+  if (!state.aiEnabled || !aiAvailable) return;
+  const prefix = getCurrentWord();
+  if (!prefix || prefix.length < 1) return;
+  const aiWords = await aiGetPredictions(prefix);
+  if (aiWords && aiWords.length > 0) {
+    const container = document.getElementById('predictions');
+    container.innerHTML = aiWords.map(w =>
+      `<div class="pred-btn" onclick="acceptPrediction('${w}')">${w} <span class="badge">AI</span></div>`
+    ).join('');
+  }
+}
+
+initBuiltInAI();
+
+// ============================================================
+// TEXT-TO-SPEECH
+// ============================================================
+function speakText() {
+  if (!state.text.trim()) return;
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(state.text);
+    u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  }
+}
+function speakChar(ch) {
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(ch === ' ' ? 'space' : ch);
+    u.rate = 0.9; u.volume = 0.3;
+    window.speechSynthesis.speak(u);
+  }
+}
+
+// ============================================================
+// LAYER SWITCH
+// ============================================================
+function switchLayer(layer) {
+  state.layer = layer;
+  state.scanMode = 'row';
+  state.selectedRow = -1;
+  state.currentRow = 0;
+  state.currentCol = 0;
+  document.querySelectorAll('.layers button').forEach(b => {
+    b.classList.toggle('active', b.dataset.layer === layer);
+  });
+  renderKeyboard();
+  updateUI();
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function loadSettings() {
+  const speed = localStorage.getItem('switchaac_speed');
+  if (speed) state.scanSpeed = parseInt(speed);
+  if (localStorage.getItem('switchaac_ai') === '1') state.aiEnabled = true;
+  if (localStorage.getItem('switchaac_speak') === '1') state.speakOnType = true;
+  state.holdCancel = parseInt(localStorage.getItem('switchaac_holdCancel')) || 2;
+  state.holdExit = parseInt(localStorage.getItem('switchaac_holdExit')) || 10;
+}
+
+function saveSettings() {
+  localStorage.setItem('switchaac_speed', state.scanSpeed);
+  localStorage.setItem('switchaac_ai', state.aiEnabled ? '1' : '0');
+  localStorage.setItem('switchaac_speak', state.speakOnType ? '1' : '0');
+  localStorage.setItem('switchaac_holdCancel', state.holdCancel);
+  localStorage.setItem('switchaac_holdExit', state.holdExit);
+}
+
+// ============================================================
+// SETTINGS DIALOG — scanable via single switch
+// ============================================================
+function openSettings() {
+  stopScan();
+  state.inSettings = true;
+  state.settingsCursor = 0;
+  renderSettings();
+  document.getElementById('settingsDialog').classList.add('active');
+  setTimeout(() => highlightSetting(0), 50);
+  startSettingsScan();
+}
+
+function closeSettings() {
+  state.inSettings = false;
+  stopSettingsScan();
+  document.getElementById('settingsDialog').classList.remove('active');
+  startScan();
+}
+
+function renderSettings() {
+  const s = state;
+  document.getElementById('settingsPanel').innerHTML = `
+    <h3>Settings</h3>
+    <div class="setting-opt" data-action="speed-down" onclick="adjustSpeed(-100)">
+      <span class="lbl">Speed</span>
+      <span class="val">${s.scanSpeed}ms</span>
+    </div>
+    <div class="setting-opt" data-action="speed-up" onclick="adjustSpeed(100)">
+      <span class="lbl">Speed +</span>
+      <span class="val">+100</span>
+    </div>
+    <div class="setting-opt ${s.speakOnType ? 'on' : 'off'}" data-action="toggle-speak" onclick="toggleSpeak()">
+      <span class="lbl">Sound</span>
+      <span class="val">${s.speakOnType ? 'ON' : 'OFF'}</span>
+    </div>
+    <div class="setting-opt ${s.aiEnabled ? 'on' : 'off'}" data-action="toggle-ai" onclick="toggleAI()">
+      <span class="lbl">AI Predict</span>
+      <span class="val">${s.aiEnabled ? 'ON' : 'OFF'}</span>
+    </div>
+    <div class="setting-opt" data-action="back" onclick="closeSettings()">
+      <span class="lbl">← Back</span>
+      <span class="val"></span>
+    </div>
+  `;
+}
+
+function getSettingOpts() {
+  return document.querySelectorAll('#settingsPanel .setting-opt');
+}
+
+function highlightSetting(idx) {
+  const opts = getSettingOpts();
+  opts.forEach((o, i) => o.classList.toggle('scanning', i === idx));
+  state.settingsCursor = idx;
+}
+
+let settingsScanTimer = null;
+function startSettingsScan() {
+  stopSettingsScan();
+  const speed = Math.min(state.scanSpeed, 1500);
+  settingsScanTimer = setInterval(() => {
+    if (!state.inSettings) { stopSettingsScan(); return; }
+    const opts = getSettingOpts();
+    if (opts.length === 0) return;
+    highlightSetting((state.settingsCursor + 1) % opts.length);
+  }, speed);
+}
+
+function stopSettingsScan() {
+  if (settingsScanTimer) { clearInterval(settingsScanTimer); settingsScanTimer = null; }
+}
+
+function selectSettingsOption() {
+  const opts = getSettingOpts();
+  if (opts.length === 0) return;
+  const active = opts[state.settingsCursor];
+  if (!active) return;
+  const action = active.dataset.action;
+  if (action === 'back') { closeSettings(); return; }
+  active.click();
+}
+
+function adjustSpeed(delta) {
+  state.scanSpeed = Math.max(200, Math.min(3000, state.scanSpeed + delta));
+  const opts = getSettingOpts();
+  opts.forEach(o => {
+    if (o.dataset.action === 'speed-down') o.querySelector('.val').textContent = state.scanSpeed + 'ms';
+  });
+  saveSettings();
+}
+
+function toggleSpeak() {
+  state.speakOnType = !state.speakOnType;
+  const opts = getSettingOpts();
+  opts.forEach(o => {
+    if (o.dataset.action === 'toggle-speak') {
+      o.classList.toggle('on', state.speakOnType);
+      o.classList.toggle('off', !state.speakOnType);
+      o.querySelector('.val').textContent = state.speakOnType ? 'ON' : 'OFF';
+    }
+  });
+  saveSettings();
+}
+
+function toggleAI() {
+  state.aiEnabled = !state.aiEnabled;
+  if (state.aiEnabled && !aiSession) createAISession();
+  else if (!state.aiEnabled) destroyAISession();
+  const opts = getSettingOpts();
+  opts.forEach(o => {
+    if (o.dataset.action === 'toggle-ai') {
+      o.classList.toggle('on', state.aiEnabled);
+      o.classList.toggle('off', !state.aiEnabled);
+      o.querySelector('.val').textContent = state.aiEnabled ? 'ON' : 'OFF';
+    }
+  });
+  saveSettings();
+}
+
+// ============================================================
+// UI UPDATES
+// ============================================================
+function updateUI() {
+  renderKeyboard();
+  const bar = document.getElementById('scanBar');
+  if (!state.scanning) {
+    bar.classList.remove('active', 'col');
+  } else if (state.scanMode === 'row') {
+    bar.classList.add('active'); bar.classList.remove('col');
+  } else if (state.scanMode === 'col') {
+    bar.classList.add('col'); bar.classList.remove('active');
+  }
+}
+
+function updateText() { document.getElementById('textDisplay').textContent = state.text || ''; }
+
+// ============================================================
+// KEYBOARD INPUT
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (state.inSettings) { closeSettings(); return; }
+    window.location.href = 'index.html';
+    return;
+  }
+  // Any other key = trigger select
+  e.preventDefault();
+  if (state.inSettings) { selectSettingsOption(); return; }
+  if (!state.scanning) { startScan(); return; }
+  selectCurrent();
+});
+
+// ============================================================
+// FULL-SCREEN TOUCH SWITCH
+// ============================================================
+let touchStart = 0, holdInt = null, holdFired = false;
+
+document.documentElement.addEventListener('touchstart', function(e) {
+  if (touchStart) return;
+  // Let buttons work normally
+  if (e.target.closest('button') || e.target.closest('.settings-panel') || e.target.closest('.layers')) return;
+  // Skip keyboard keys (they have their own click handlers)
+  if (e.target.closest('.key') || e.target.closest('.pred-btn')) return;
+
+  e.preventDefault();
+  touchStart = Date.now(); holdFired = false;
+  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
+
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    const fill = document.getElementById('holdFill');
+    fill.style.width = Math.min(100, (elapsed / state.holdExit) * 100) + '%';
+    const status = document.getElementById('holdStatus');
+    if (elapsed >= state.holdExit && !holdFired) {
+      holdFired = true; clearInterval(holdInt); holdInt = null;
+      fill.style.width = '100%'; status.textContent = '×'; status.classList.add('show');
+      setTimeout(() => { window.location.href = 'index.html'; }, 300);
+    } else if (elapsed >= state.holdCancel && !holdFired) {
+      status.textContent = 'Hold...'; status.classList.add('show');
+    }
+  }, 50);
+}, { passive: false });
+
+document.documentElement.addEventListener('touchend', function(e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
+  fill.style.width = '0%'; status.classList.remove('show');
+  if (holdFired) { holdFired = false; return; }
+  if (elapsed >= state.holdCancel) {
+    // Cancel: stop if scanning, or reset
+    status.textContent = '×'; status.classList.add('show');
+    setTimeout(() => status.classList.remove('show'), 500);
+    if (state.inSettings) { closeSettings(); return; }
+    stopScan();
+  } else {
+    // Quick tap = select
+    if (state.inSettings) { selectSettingsOption(); return; }
+    if (!state.scanning) { startScan(); return; }
+    selectCurrent();
+  }
+}, { passive: true });
+
+document.documentElement.addEventListener('touchcancel', function(e) {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0;
+  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
+  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
+}, { passive: true });
+
+// ============================================================
+// HELP OVERLAY
+// ============================================================
+function showHelp() {
+  document.getElementById('helpOverlay').classList.add('show');
+}
+function hideHelp() {
+  document.getElementById('helpOverlay').classList.remove('show');
+}
+
+// ============================================================
+// FIREBASE AUTH — save/load settings
+// ============================================================
+// Auth-aware: when user signs in, load cloud prefs and merge
+// When settings change while signed in, save to cloud
+
+const origSaveSettings = saveSettings;
+saveSettings = function() {
+  origSaveSettings();
+  if (currentUser) {
+    saveFirebasePrefs(currentUser.uid, {
+      scanSpeed: state.scanSpeed,
+      aiEnabled: state.aiEnabled,
+      speakOnType: state.speakOnType,
+      holdCancel: state.holdCancel,
+      holdExit: state.holdExit
+    });
+  }
+};
+
+// Listen for auth state
+let prefsLoaded = false;
+onAuthChange(async (user) => {
+  if (user && !prefsLoaded) {
+    prefsLoaded = true;
+    const cloudPrefs = await loadFirebasePrefs(user.uid);
+    if (cloudPrefs) {
+      if (cloudPrefs.scanSpeed) state.scanSpeed = cloudPrefs.scanSpeed;
+      if (cloudPrefs.aiEnabled !== undefined) state.aiEnabled = cloudPrefs.aiEnabled;
+      if (cloudPrefs.speakOnType !== undefined) state.speakOnType = cloudPrefs.speakOnType;
+      if (cloudPrefs.holdCancel) state.holdCancel = cloudPrefs.holdCancel;
+      if (cloudPrefs.holdExit) state.holdExit = cloudPrefs.holdExit;
+      saveSettings();
+      // Restart scan with new speed
+      if (state.scanning) { startScan(); }
+    }
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadSettings();
+renderKeyboard();
+updateText();
+startScan();
+</script>
+
+</body>
+</html>

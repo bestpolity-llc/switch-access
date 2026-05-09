@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pick</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    overflow: hidden;
+    position: relative;
+    padding: 20px;
+  }
+
+  .game-area {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .start-screen { text-align: center; }
+  .start-screen .emoji { font-size: clamp(4rem, 20vw, 7rem); margin-bottom: 12px; }
+  .start-screen .hint {
+    font-size: clamp(1rem, 4vw, 1.5rem);
+    color: rgba(255,255,255,0.7);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  .choices {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+  }
+
+  .choice {
+    width: clamp(140px, 40vw, 220px);
+    height: clamp(140px, 40vw, 220px);
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.15);
+    transition: all 0.2s;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .choice .emoji { font-size: clamp(3rem, 12vw, 5rem); margin-bottom: 8px; }
+  .choice .label { font-size: clamp(0.9rem, 3.5vw, 1.2rem); color: rgba(255,255,255,0.8); font-weight: 600; }
+
+  .choice.highlight {
+    border-color: #FFD700;
+    background: rgba(255,215,0,0.25);
+    box-shadow: 0 0 30px rgba(255,215,0,0.4);
+    transform: scale(1.06);
+    animation: glow 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from { box-shadow: 0 0 15px rgba(255,215,0,0.3); }
+    to { box-shadow: 0 0 40px rgba(255,215,0,0.6); }
+  }
+  .choice.picked { border-color: #43e97b; background: rgba(67,233,123,0.25); }
+
+  .scan-bar {
+    width: 100%;
+    max-width: 200px;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .scan-bar .fill {
+    height: 100%;
+    background: #FFD700;
+    width: 100%;
+    transition: width 0.05s linear;
+    border-radius: 2px;
+  }
+
+  .results {
+    display: none;
+    text-align: center;
+  }
+  .results .emoji { font-size: clamp(4rem, 18vw, 7rem); margin-bottom: 8px; }
+  .results .text { font-size: clamp(1rem, 4vw, 1.5rem); color: rgba(255,255,255,0.9); font-weight: 600; }
+
+  .hold-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 6px; background: transparent; z-index: 60; pointer-events: none;
+  }
+  .hold-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #FFD700, #FF5722);
+    transition: width 0.1s linear;
+    border-radius: 0 3px 3px 0;
+  }
+  .hold-status {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 1rem; color: #FFD700; z-index: 60; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  .hold-status.show { opacity: 1; }
+
+  .help-btn {
+    position: fixed; top: 16px;
+    left: 16px;
+    width: 56px;
+    height: 56px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.8);
+    font-size: 1.8rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 50;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:active { background: rgba(255,255,255,0.35); }
+
+  .help-overlay {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    justify-content: center; align-items: center;
+    padding: 20px;
+  }
+  .help-overlay.show { display: flex; }
+  .help-box {
+    background: #fff; border-radius: 24px;
+    padding: 28px 24px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .help-box h2 { text-align: center; margin-bottom: 20px; color: #333; font-weight: 700; }
+  .help-section { margin-bottom: 18px; }
+  .help-section .title { font-weight: 700; color: #555; font-size: 0.9rem; margin-bottom: 8px; text-align: center; }
+  .help-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 10px 12px;
+    background: #f5f6fa; border-radius: 14px; margin-bottom: 6px;
+  }
+  .help-row .gesture { font-size: 1.8rem; min-width: 44px; text-align: center; }
+  .help-row .arrow { color: #bbb; font-size: 1.2rem; font-weight: 300; }
+  .help-row .desc { font-size: 1.1rem; font-weight: 600; color: #333; }
+  .help-row .desc-sub { font-size: 0.85rem; color: #999; font-weight: 400; margin-left: 4px; }
+  .help-close {
+    display: block; width: 100%; padding: 14px; margin-top: 12px;
+    background: #333; color: #fff; border: none; border-radius: 14px;
+    font-size: 1.1rem; font-weight: 700; cursor: pointer;
+    touch-action: manipulation; text-align: center;
+  }
+  .help-close:active { background: #555; }
+</style>
+</head>
+<body>
+<div class="game-area">
+  <div id="startScreen" class="start-screen">
+    <div class="emoji">🤔</div>
+    <div class="hint">Tap to play!</div>
+  </div>
+
+  <div id="gameContent" style="display:none; text-align:center">
+    <div id="prompt" style="font-size:clamp(1rem,4vw,1.4rem);color:rgba(255,255,255,0.7);margin-bottom:16px;"></div>
+    <div class="choices" id="choices"></div>
+    <div class="scan-bar" id="scanBar"><div class="fill" id="scanFill"></div></div>
+    <div class="results" id="results">
+      <div class="emoji" id="resultEmoji"></div>
+      <div class="text" id="resultText"></div>
+    </div>
+  </div>
+</div>
+
+<button class="help-btn" id="helpBtn" onclick="showHelp()">?</button>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h2>How To Use</h2>
+    <div class="help-section">
+      <div class="title">👆 Touch (iPad)</div>
+      <div class="help-row"><span class="gesture">👆</span><span class="arrow">→</span><span class="desc">Tap <span class="desc-sub">quick</span></span></div>
+      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">2s</span></span></div>
+      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">10s</span></span></div>
+    </div>
+    <div class="help-section">
+      <div class="title">⌨️ Keyboard</div>
+      <div class="help-row"><span class="gesture">␣/↵</span><span class="arrow">→</span><span class="desc">Select</span></div>
+      <div class="help-row"><span class="gesture">Esc</span><span class="arrow">→</span><span class="desc">Back</span></div>
+    </div>
+    <div style="text-align:center;margin-top:12px"><a href="../guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a></div>
+    <button class="help-close" onclick="hideHelp()">Got it</button>
+  </div>
+</div>
+
+<div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+const PAIRS = [
+  ['🍕','🍦','Pizza','Ice Cream'],
+  ['🐱','🐶','Cats','Dogs'],
+  ['🌞','🌙','Sun','Moon'],
+  ['🌊','🏔️','Beach','Mountains'],
+  ['🎮','📚','Games','Books'],
+  ['🎵','🎨','Music','Art'],
+  ['🚗','✈️','Cars','Planes'],
+  ['🍔','🌮','Burgers','Tacos'],
+  ['⚽','🏀','Soccer','Basketball'],
+  ['🌺','🌻','Spring','Summer'],
+];
+
+const SCAN_SPEED = 1200;
+const ROUNDS = 5;
+
+let currentRound = 0;
+let currentHL = 0;
+let picking = false;
+let pairs = [];
+let scanTimer = null;
+let results = [];
+let gameActive = false;
+
+function shuffle(a) { const c=[...a]; for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];} return c; }
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameContent').style.display = 'block';
+  pairs = shuffle(PAIRS).slice(0, ROUNDS);
+  currentRound = 0; results = []; gameActive = true;
+  showRound();
+}
+
+function showRound() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('choices').style.display = 'flex';
+  const p = pairs[currentRound];
+  document.getElementById('choices').innerHTML = `
+    <div class="choice" data-idx="0">
+      <div class="emoji">${p[0]}</div>
+      <div class="label">${p[2]}</div>
+    </div>
+    <div class="choice" data-idx="1">
+      <div class="emoji">${p[1]}</div>
+      <div class="label">${p[3]}</div>
+    </div>
+  `;
+  currentHL = 0; picking = true;
+  highlight(0);
+  startScan();
+}
+
+function highlight(idx) {
+  document.querySelectorAll('.choice').forEach((c,i) => c.classList.toggle('highlight', i===idx));
+}
+
+function startScan() {
+  stopScan();
+  let progress = 100;
+  const step = 5;
+  function tick() {
+    if (!picking) return;
+    progress -= step;
+    document.getElementById('scanFill').style.width = progress + '%';
+    if (progress <= 0) {
+      currentHL = currentHL === 0 ? 1 : 0;
+      highlight(currentHL);
+      progress = 100;
+    }
+    scanTimer = setTimeout(tick, SCAN_SPEED * step / 100);
+  }
+  scanTimer = setTimeout(tick, SCAN_SPEED * step / 100);
+}
+
+function stopScan() { if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; } }
+
+function pick(idx) {
+  if (!picking || !gameActive) return;
+  stopScan(); picking = false;
+  const p = pairs[currentRound];
+  const picked = idx === 0 ? p[2] : p[3];
+  const emoji = idx === 0 ? p[0] : p[1];
+  results.push(picked);
+  document.querySelectorAll('.choice').forEach((c,i) => { c.classList.remove('highlight'); if(i===idx) c.classList.add('picked'); });
+  setTimeout(() => {
+    currentRound++;
+    if (currentRound < ROUNDS) showRound();
+    else showResults();
+  }, 800);
+}
+
+function showResults() {
+  document.getElementById('choices').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  const counts = {};
+  results.forEach(r => { counts[r] = (counts[r]||0) + 1; });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  if (sorted.length === 0) {
+    document.getElementById('resultEmoji').textContent = '🎉';
+    document.getElementById('resultText').textContent = 'All done!';
+  } else {
+    const top = sorted[0];
+    let topEmoji = '🎉';
+    for (const p of pairs) {
+      if (p[2] === top[0]) topEmoji = p[0];
+      if (p[3] === top[0]) topEmoji = p[1];
+    }
+    document.getElementById('resultEmoji').textContent = topEmoji;
+    document.getElementById('resultText').textContent = `You picked ${top[0]}!`;
+  }
+  document.getElementById('prompt').textContent = 'All done!';
+}
+
+function handleAction() {
+  if (!gameActive) { startGame(); return; }
+  if (!picking) return;
+  // Pick whatever is highlighted
+  pick(currentHL);
+}
+
+// Touch switch
+let touchStart = 0, holdInt = null, holdFired = false;
+document.documentElement.addEventListener('touchstart', function(e) {
+  if (touchStart) return;
+  if (e.target.closest('.choice')) return;
+  e.preventDefault();
+  touchStart = Date.now(); holdFired = false;
+  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    document.getElementById('holdFill').style.width = Math.min(100, (elapsed/10)*100) + '%';
+    if (elapsed >= 10 && !holdFired) {
+      holdFired = true; clearInterval(holdInt); holdInt = null;
+      document.getElementById('holdFill').style.width = '100%';
+      document.getElementById('holdStatus').textContent = '×'; document.getElementById('holdStatus').classList.add('show');
+      setTimeout(() => { window.location.href = 'index.html'; }, 300);
+    } else if (elapsed >= 2 && !holdFired) {
+      document.getElementById('holdStatus').textContent = 'Hold...'; document.getElementById('holdStatus').classList.add('show');
+    }
+  }, 50);
+}, { passive: false });
+
+document.documentElement.addEventListener('touchend', function(e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
+  fill.style.width = '0%'; status.classList.remove('show');
+  if (holdFired) { holdFired = false; return; }
+  if (elapsed >= 2) {
+    gameActive = false;
+    document.getElementById('gameContent').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'block';
+  } else {
+    handleAction();
+  }
+}, { passive: true });
+
+document.documentElement.addEventListener('touchcancel', function(e) {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0;
+  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
+  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
+}, { passive: true });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
+  e.preventDefault();
+  handleAction();
+});
+
+function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
+function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+</script>
+</body>
+</html>

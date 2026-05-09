@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Calc</title>
+<style>
+  :root {
+    --blue: #4A7BC4;
+    --gold: #C8934A;
+    --bg: #EFEADE;
+    --text: #1a1a2e;
+    --key: #fff;
+    --num: #4A7BC4;
+    --op: #C8934A;
+    --func: #d44;
+    --eq: #4A7BC4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 500px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* === DISPLAY === */
+  .display {
+    background: #fff;
+    border: 3px solid #e0dcd0;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .expression {
+    font-size: clamp(1rem, 4vw, 1.3rem);
+    color: #888;
+    text-align: right;
+    min-height: 28px;
+    word-wrap: break-word;
+    font-weight: 500;
+  }
+
+  .result {
+    font-size: clamp(2rem, 8vw, 3rem);
+    color: var(--text);
+    text-align: right;
+    font-weight: 700;
+    min-height: 48px;
+    word-wrap: break-word;
+    line-height: 1.2;
+  }
+
+  .result .fraction-part {
+    font-size: clamp(1.5rem, 6vw, 2.4rem);
+  }
+
+  /* === SCAN BAR === */
+  .scan-bar {
+    height: 4px;
+    background: #e0dcd0;
+    border-radius: 2px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+  .scan-bar.active { background: var(--blue); }
+  .scan-bar.col { background: var(--gold); }
+
+  /* === GRID === */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    flex: 1;
+    align-content: start;
+  }
+
+  .btn {
+    padding: 16px 4px;
+    background: var(--key);
+    border: 3px solid #e0dcd0;
+    border-radius: 14px;
+    color: var(--text);
+    font-size: clamp(1.3rem, 5vw, 1.8rem);
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+    font-weight: 700;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .btn:active { transform: scale(0.95); }
+
+  .btn.num { color: var(--num); }
+  .btn.op { color: var(--op); }
+  .btn.func { color: var(--func); }
+  .btn.eq {
+    background: var(--eq);
+    border-color: var(--eq);
+    color: #fff;
+    font-size: clamp(1.5rem, 5.5vw, 2rem);
+  }
+  .btn.frac { color: var(--text); }
+
+  .btn.scan-row {
+    border-color: var(--blue);
+    background: #e8f0ff;
+    box-shadow: 0 0 16px rgba(74,123,196,0.3);
+  }
+  .btn.scan-col {
+    border-color: var(--gold);
+    background: #fff5e8;
+    box-shadow: 0 0 20px rgba(200,147,74,0.4);
+    transform: scale(1.03);
+  }
+
+  /* === HELP === */
+  .help-btn {
+    position: fixed; top: 16px;
+    left: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #e0dcd0;
+    border: 2px solid #d0ccc0;
+    color: #777;
+    font-size: 1.8rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 50;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:active { background: #d5d1c5; }
+
+  .help-overlay {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    justify-content: center; align-items: center;
+    padding: 20px;
+  }
+  .help-overlay.show { display: flex; }
+  .help-box {
+    background: #fff; border-radius: 24px;
+    padding: 28px 24px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .help-box h2 { text-align: center; margin-bottom: 20px; color: #333; font-weight: 700; }
+  .help-section { margin-bottom: 18px; }
+  .help-section .title { font-weight: 700; color: #555; font-size: 0.9rem; margin-bottom: 8px; text-align: center; }
+  .help-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 10px 12px;
+    background: #f5f6fa; border-radius: 14px; margin-bottom: 6px;
+  }
+  .help-row .gesture { font-size: 1.8rem; min-width: 44px; text-align: center; }
+  .help-row .arrow { color: #bbb; font-size: 1.2rem; font-weight: 300; }
+  .help-row .desc { font-size: 1.1rem; font-weight: 600; color: #333; }
+  .help-row .desc-sub { font-size: 0.85rem; color: #999; font-weight: 400; margin-left: 4px; }
+  .help-close {
+    display: block; width: 100%; padding: 14px; margin-top: 12px;
+    background: #333; color: #fff; border: none; border-radius: 14px;
+    font-size: 1.1rem; font-weight: 700; cursor: pointer;
+    touch-action: manipulation; text-align: center;
+  }
+  .help-close:active { background: #555; }
+
+  /* === HOLD BAR === */
+  .hold-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 6px; background: transparent; z-index: 60; pointer-events: none;
+  }
+  .hold-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #FFD700, #FF5722);
+    transition: width 0.1s linear;
+    border-radius: 0 3px 3px 0;
+  }
+  .hold-status {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 1rem; color: #FFD700; z-index: 60; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  .hold-status.show { opacity: 1; }
+</style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+</head>
+<body>
+<div class="container">
+  <!-- Display -->
+  <div class="display">
+    <div class="expression" id="expression"></div>
+    <div class="result" id="result">0</div>
+  </div>
+
+  <!-- Scan bar -->
+  <div class="scan-bar" id="scanBar"></div>
+
+  <!-- Button grid -->
+  <div class="grid" id="grid"></div>
+</div>
+
+<button class="help-btn" onclick="showHelp()">?</button>
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h2>How To Use</h2>
+    <div class="help-section">
+      <div class="title">👆 Touch (iPad)</div>
+      <div class="help-row"><span class="gesture">👆</span><span class="arrow">→</span><span class="desc">Tap <span class="desc-sub">quick</span></span></div>
+      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">2s</span></span></div>
+      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">10s</span></span></div>
+    </div>
+    <div class="help-section">
+      <div class="title">⌨️ Keyboard</div>
+      <div class="help-row"><span class="gesture">␣/↵</span><span class="arrow">→</span><span class="desc">Select</span></div>
+      <div class="help-row"><span class="gesture">Esc</span><span class="arrow">→</span><span class="desc">Back</span></div>
+    </div>
+    <div style="text-align:center;margin-top:12px">
+      <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a>
+    </div>
+    <button class="help-close" onclick="hideHelp()">Got it</button>
+  </div>
+</div>
+
+<div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+// ============================================================
+// BUTTON LAYOUT (6 rows × 4 columns)
+// ============================================================
+const BUTTONS = [
+  [{id:'C',    label:'C',   cls:'func'},  {id:'⌫',   label:'⌫',  cls:'func'}, {id:'%',    label:'%',     cls:'op'},   {id:'÷',   label:'÷',   cls:'op'}],
+  [{id:'7',    label:'7',   cls:'num'},  {id:'8',    label:'8',  cls:'num'},  {id:'9',    label:'9',  cls:'num'},  {id:'×',   label:'×',   cls:'op'}],
+  [{id:'4',    label:'4',   cls:'num'},  {id:'5',    label:'5',  cls:'num'},  {id:'6',    label:'6',  cls:'num'},  {id:'−',   label:'−',   cls:'op'}],
+  [{id:'1',    label:'1',   cls:'num'},  {id:'2',    label:'2',  cls:'num'},  {id:'3',    label:'3',  cls:'num'},  {id:'+',   label:'+',   cls:'op'}],
+  [{id:'0',    label:'0',   cls:'num'},  {id:'.',    label:'.',  cls:'num'},  {id:'½',    label:'½',  cls:'frac'}, {id:'=',   label:'=',   cls:'eq'}],
+  [{id:'¼',    label:'¼',   cls:'frac'}, {id:'¾',    label:'¾',  cls:'frac'}, {id:'⅓',    label:'⅓',  cls:'frac'}, {id:'⅔',   label:'⅔',  cls:'frac'}],
+];
+
+const ROWS = BUTTONS.length;
+const COLS = 4;
+
+// ============================================================
+// FRACTION HELPERS
+// ============================================================
+const FRACTIONS = {
+  '½': 1/2, '¼': 1/4, '¾': 3/4, '⅓': 1/3, '⅔': 2/3,
+};
+
+const FRAC_UNICODE = {
+  '1/2': '½', '1/4': '¼', '3/4': '¾', '1/3': '⅓', '2/3': '⅔',
+};
+
+function decimalToMixed(v) {
+  if (v === null || isNaN(v) || !isFinite(v)) return { whole: null, frac: '' };
+  if (Math.abs(v - Math.round(v)) < 1e-9) return { whole: Math.round(v), frac: '' };
+  const sign = v < 0 ? -1 : 1;
+  v = Math.abs(v);
+  const whole = Math.floor(v);
+  const frac = v - whole;
+  if (whole === 0) return { whole: null, frac: fractionString(frac, sign) };
+  return { whole: whole * sign, frac: fractionString(frac, 1) };
+}
+
+function fractionString(frac, sign) {
+  // Try common fractions
+  const nearest = Object.entries(FRACTIONS).find(([,v]) => Math.abs(frac - v) < 0.01);
+  if (nearest) return sign < 0 ? '-' + nearest[0] : nearest[0];
+  // Try 2/3 (already covered above) and 1/5, 1/8, etc.
+  for (const [uni, val] of Object.entries(FRACTIONS)) {
+    if (Math.abs(frac - val) < 0.02) return sign < 0 ? '-' + uni : uni;
+  }
+  // Try 1/5, 1/6, 1/7, 1/8, 2/5, 3/5, 4/5, 5/6
+  const extras = [[1,5],[2,5],[3,5],[4,5],[1,6],[5,6],[1,7],[1,8],[3,8],[5,8],[7,8],[1,9],[2,9],[4,9],[5,9],[7,9],[8,9],[1,10],[3,10],[7,10],[9,10]];
+  for (const [n,d] of extras) {
+    if (Math.abs(frac - n/d) < 0.015) return (sign < 0 ? '-' : '') + n + '/' + d;
+  }
+  return ''; // Not a clean fraction
+}
+
+function formatResult(v) {
+  if (v === null || isNaN(v) || !isFinite(v)) return '—';
+  const mixed = decimalToMixed(v);
+  if (mixed.whole !== null && mixed.frac) {
+    return mixed.whole + '<span class="fraction-part">' + mixed.frac + '</span>';
+  } else if (mixed.frac) {
+    return '<span class="fraction-part">' + mixed.frac + '</span>';
+  }
+  // Format: remove trailing zeros but keep at least one decimal if needed
+  if (Number.isInteger(v)) return String(v);
+  return v.toFixed(4).replace(/\.?0+$/, '');
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  current: '0',       // current number being built (string)
+  prev: null,         // previous number (number)
+  op: null,           // last operator
+  result: null,       // last result
+  displayExpr: '',    // expression shown
+  displayResult: '0', // result shown
+  calcState: 'first', // 'first' | 'op' | 'second' | 'result'
+  scanSpeed: 1200,
+  scanning: true,
+  scanMode: 'row',
+  currentRow: 0,
+  currentCol: 0,
+  selectedRow: -1,
+  scanTimer: null,
+};
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  let html = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const btn = BUTTONS[r][c];
+      const cls = ['btn', btn.cls];
+      if (state.scanMode === 'row' && state.currentRow === r) cls.push('scan-row');
+      else if (state.scanMode === 'col' && state.selectedRow === r && state.currentCol === c) cls.push('scan-col');
+      html += `<div class="${cls.join(' ')}" onclick="press('${btn.id}')">${btn.label}</div>`;
+    }
+  }
+  grid.innerHTML = html;
+}
+
+// ============================================================
+// SCAN ENGINE
+// ============================================================
+function totalRows() { return ROWS; }
+
+function nextScanStep() {
+  if (!state.scanning) return;
+  if (state.scanMode === 'row') {
+    state.currentRow = (state.currentRow + 1) % totalRows();
+    state.currentCol = 0;
+  } else {
+    state.currentCol = (state.currentCol + 1) % COLS;
+  }
+  updateUI();
+  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+}
+
+function startScan() {
+  stopScan();
+  state.scanning = true;
+  state.scanMode = 'row';
+  state.currentRow = 0;
+  state.currentCol = 0;
+  state.selectedRow = -1;
+  updateUI();
+  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+}
+
+function stopScan() {
+  state.scanning = false;
+  if (state.scanTimer) { clearTimeout(state.scanTimer); state.scanTimer = null; }
+  updateUI();
+}
+
+function selectCurrent() {
+  if (!state.scanning) { startScan(); return; }
+
+  if (state.scanMode === 'row') {
+    state.selectedRow = state.currentRow;
+    state.scanMode = 'col';
+    state.currentCol = 0;
+    updateUI();
+    return;
+  }
+
+  if (state.scanMode === 'col') {
+    const btn = BUTTONS[state.selectedRow][state.currentCol];
+    if (btn) handleInput(btn.id);
+    state.scanMode = 'row';
+    state.selectedRow = -1;
+    state.currentRow = 0;
+    state.currentCol = 0;
+    updateUI();
+  }
+}
+
+// ============================================================
+// MATH ENGINE
+// ============================================================
+function handleInput(id) {
+  if (id === 'C') { allClear(); return; }
+  if (id === '⌫') { backspace(); return; }
+
+  if (id === '=') { calculate(); return; }
+
+  if (['+','−','×','÷'].includes(id)) { setOperator(id); return; }
+
+  if (id === '%') { applyPercent(); return; }
+
+  if (id === '.') { addDecimal(); return; }
+
+  if (['0','1','2','3','4','5','6','7','8','9'].includes(id)) { addDigit(id); return; }
+
+  if (FRACTIONS[id] !== undefined) { addFraction(id); return; }
+}
+
+function allClear() {
+  state.current = '0';
+  state.prev = null;
+  state.op = null;
+  state.result = null;
+  state.calcState = 'first';
+  state.displayExpr = '';
+  updateDisplay();
+}
+
+function backspace() {
+  if (state.calcState === 'result') { allClear(); return; }
+  if (state.current.length > 1) {
+    state.current = state.current.slice(0, -1);
+  } else {
+    state.current = '0';
+  }
+  updateDisplay();
+}
+
+function addDigit(d) {
+  if (state.calcState === 'result') {
+    // Start fresh
+    state.current = d;
+    state.calcState = 'first';
+    state.op = null;
+    state.prev = null;
+    state.displayExpr = '';
+  } else {
+    if (state.current === '0') {
+      state.current = d;
+    } else {
+      state.current += d;
+    }
+  }
+  updateDisplay();
+}
+
+function addDecimal() {
+  if (state.current.includes('.')) return;
+  state.current += '.';
+  updateDisplay();
+}
+
+function addFraction(id) {
+  const val = FRACTIONS[id];
+  if (state.calcState === 'result') {
+    state.prev = null;
+    state.op = null;
+    state.displayExpr = '';
+    state.calcState = 'first';
+  }
+  state.current = String(val);
+  updateDisplay();
+}
+
+function setOperator(op) {
+  const val = parseFloat(state.current);
+  if (isNaN(val)) return;
+
+  if (state.calcState === 'first') {
+    state.prev = val;
+    state.op = op;
+    state.calcState = 'op';
+    state.displayExpr = prettyNum(state.prev) + ' ' + op + ' ';
+    updateDisplay(false);
+  } else if (state.calcState === 'op') {
+    // Just change operator
+    state.op = op;
+    state.displayExpr = prettyNum(state.prev) + ' ' + op + ' ';
+    updateDisplay(false);
+  } else if (state.calcState === 'second') {
+    // Chain calculation
+    calculate();
+    state.prev = state.result;
+    state.op = op;
+    state.calcState = 'op';
+    state.current = '0';
+    state.displayExpr = prettyNum(state.result) + ' ' + op + ' ';
+    updateDisplay(false);
+  }
+}
+
+function applyPercent() {
+  const val = parseFloat(state.current);
+  if (isNaN(val)) return;
+  state.current = String(val / 100);
+  updateDisplay();
+}
+
+function calculate() {
+  const val = parseFloat(state.current);
+  if (isNaN(val)) return;
+  if (state.calcState === 'result') {
+    // Repeat op with result
+    if (state.op && state.result !== null) {
+      state.prev = state.result;
+    } else {
+      return;
+    }
+  }
+
+  if (state.calcState === 'first') {
+    // Just = on a single number — show it
+    state.result = val;
+    state.displayExpr = prettyNum(val) + ' = ';
+    state.calcState = 'result';
+    updateDisplay();
+    return;
+  }
+
+  if (state.calcState === 'op' || state.calcState === 'second') {
+    const a = state.prev;
+    const b = val;
+    let r;
+    switch (state.op) {
+      case '+': r = a + b; break;
+      case '−': r = a - b; break;
+      case '×': r = a * b; break;
+      case '÷': r = b !== 0 ? a / b : null; break;
+    }
+    state.result = r;
+    state.displayExpr = prettyNum(a) + ' ' + state.op + ' ' + prettyNum(b) + ' = ';
+    state.calcState = 'result';
+    state.current = r !== null ? String(r) : '0';
+    updateDisplay();
+  }
+}
+
+function prettyNum(n) {
+  if (n === null || isNaN(n)) return '—';
+  // Check if it's a nice fraction
+  for (const [uni, val] of Object.entries(FRACTIONS)) {
+    if (Math.abs(n - val) < 1e-9) return uni;
+  }
+  if (Number.isInteger(n)) return String(n);
+  return String(parseFloat(n.toFixed(8)));
+}
+
+// ============================================================
+// DISPLAY UPDATE
+// ============================================================
+function updateDisplay(showCurrent = true) {
+  document.getElementById('expression').textContent = state.displayExpr || '';
+  const resultEl = document.getElementById('result');
+  if (state.calcState === 'result') {
+    const r = state.result;
+    if (r === null || isNaN(r) || !isFinite(r)) {
+      resultEl.innerHTML = '—';
+    } else {
+      resultEl.innerHTML = formatResult(r);
+    }
+  } else if (showCurrent) {
+    // Show current number being typed
+    const n = parseFloat(state.current);
+    if (!isNaN(n)) {
+      // Check for clean fraction match
+      let display = state.current;
+      for (const [uni, val] of Object.entries(FRACTIONS)) {
+        if (Math.abs(n - val) < 1e-9) { display = uni; break; }
+      }
+      resultEl.textContent = display;
+    } else {
+      resultEl.textContent = state.current || '0';
+    }
+  }
+}
+
+function updateUI() {
+  renderGrid();
+  const bar = document.getElementById('scanBar');
+  if (!state.scanning) { bar.classList.remove('active','col'); }
+  else if (state.scanMode === 'row') { bar.classList.add('active'); bar.classList.remove('col'); }
+  else if (state.scanMode === 'col') { bar.classList.add('col'); bar.classList.remove('active'); }
+}
+
+// ============================================================
+// KEYBOARD INPUT
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
+  // Any other key = trigger select
+  e.preventDefault();
+  if (!state.scanning) { startScan(); return; }
+  selectCurrent();
+});
+
+// ============================================================
+// FULL-SCREEN TOUCH SWITCH
+// ============================================================
+let touchStart = 0, holdInt = null, holdFired = false;
+const holdExit = 10, holdCancel = 2;
+
+document.documentElement.addEventListener('touchstart', function(e) {
+  if (touchStart) return;
+  if (e.target.closest('.btn') || e.target.closest('.help-overlay')) return;
+  e.preventDefault();
+  touchStart = Date.now(); holdFired = false;
+  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    document.getElementById('holdFill').style.width = Math.min(100, (elapsed/holdExit)*100) + '%';
+    const status = document.getElementById('holdStatus');
+    if (elapsed >= holdExit && !holdFired) {
+      holdFired = true; clearInterval(holdInt); holdInt = null;
+      document.getElementById('holdFill').style.width = '100%';
+      status.textContent = '×'; status.classList.add('show');
+      setTimeout(() => { window.location.href = 'index.html'; }, 300);
+    } else if (elapsed >= holdCancel && !holdFired) {
+      status.textContent = 'Hold...'; status.classList.add('show');
+    }
+  }, 50);
+}, { passive: false });
+
+document.documentElement.addEventListener('touchend', function(e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
+  fill.style.width = '0%'; status.classList.remove('show');
+  if (holdFired) { holdFired = false; return; }
+  if (elapsed >= holdCancel) {
+    allClear();
+  } else {
+    if (!state.scanning) { startScan(); return; }
+    selectCurrent();
+  }
+}, { passive: true });
+
+document.documentElement.addEventListener('touchcancel', function(e) {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0;
+  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
+  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
+}, { passive: true });
+
+// ============================================================
+// HELP
+// ============================================================
+function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
+function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+
+// ============================================================
+// FIREBASE AUTH — save/load settings
+// ============================================================
+onAuthChange(async (user) => {
+  if (user) {
+    const prefs = await loadFirebasePrefs(user.uid);
+    if (prefs && prefs.scanSpeed) {
+      state.scanSpeed = prefs.scanSpeed;
+      if (state.scanning) { startScan(); }
+    }
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+renderGrid();
+updateDisplay();
+startScan();
+</script>
+</body>
+</html>

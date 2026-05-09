@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pop!</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(180deg, #a8edea 0%, #fed6e3 100%);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .game-area {
+    width: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .balloon-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    max-width: 600px;
+  }
+
+  .balloon {
+    width: 80px;
+    height: 100px;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.3s;
+    position: relative;
+    animation: float 2s ease-in-out infinite;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .balloon::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    width: 2px;
+    height: 15px;
+    background: #999;
+  }
+  .balloon.pop {
+    animation: popAnim 0.3s ease-out forwards;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes popAnim {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  .start-screen { text-align: center; }
+  .start-screen .emoji { font-size: clamp(4rem, 20vw, 7rem); margin-bottom: 12px; }
+  .start-screen .hint {
+    font-size: clamp(1rem, 4vw, 1.5rem);
+    color: #555;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .confetti {
+    position: fixed;
+    pointer-events: none;
+    font-size: 1.8rem;
+    animation: confettiFall 1.5s ease-out forwards;
+    z-index: 10;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(200px) rotate(720deg); opacity: 0; }
+  }
+
+  .big-pop {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8rem;
+    pointer-events: none;
+    animation: bigPopAnim 0.5s ease-out forwards;
+    z-index: 10;
+  }
+  @keyframes bigPopAnim {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  }
+
+  .hold-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 6px; background: transparent; z-index: 60; pointer-events: none;
+  }
+  .hold-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #FFD700, #FF5722);
+    transition: width 0.1s linear;
+    border-radius: 0 3px 3px 0;
+  }
+  .hold-status {
+    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 1rem; color: #FFD700; z-index: 60; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+  .hold-status.show { opacity: 1; }
+
+  /* === HELP BUTTON === */
+  .help-btn {
+    position: fixed; top: 16px;
+    left: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.8);
+    font-size: 1.8rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 50;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .help-btn:active { background: rgba(255,255,255,0.4); }
+
+  .help-overlay {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    justify-content: center; align-items: center;
+    padding: 20px;
+  }
+  .help-overlay.show { display: flex; }
+  .help-box {
+    background: #fff; border-radius: 24px;
+    padding: 28px 24px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .help-box h2 { text-align: center; margin-bottom: 20px; color: #333; font-weight: 700; }
+  .help-section { margin-bottom: 18px; }
+  .help-section .title { font-weight: 700; color: #555; font-size: 0.9rem; margin-bottom: 8px; text-align: center; }
+  .help-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 10px 12px;
+    background: #f5f6fa; border-radius: 14px; margin-bottom: 6px;
+  }
+  .help-row .gesture { font-size: 1.8rem; min-width: 44px; text-align: center; }
+  .help-row .arrow { color: #bbb; font-size: 1.2rem; font-weight: 300; }
+  .help-row .desc { font-size: 1.1rem; font-weight: 600; color: #333; }
+  .help-row .desc-sub { font-size: 0.85rem; color: #999; font-weight: 400; margin-left: 4px; }
+  .help-close {
+    display: block; width: 100%; padding: 14px; margin-top: 12px;
+    background: #333; color: #fff; border: none; border-radius: 14px;
+    font-size: 1.1rem; font-weight: 700; cursor: pointer;
+    touch-action: manipulation; text-align: center;
+  }
+  .help-close:active { background: #555; }
+</style>
+</head>
+<body>
+<div class="game-area" id="gameArea">
+  <div id="startScreen" class="start-screen">
+    <div class="emoji">🎈</div>
+    <div class="hint">Tap to play!</div>
+  </div>
+
+  <div class="balloon-container" id="balloonContainer" style="display:none"></div>
+</div>
+
+<button class="help-btn" id="helpBtn" onclick="showHelp()">?</button>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-box">
+    <h2>How To Use</h2>
+    <div class="help-section">
+      <div class="title">👆 Touch (iPad)</div>
+      <div class="help-row"><span class="gesture">👆</span><span class="arrow">→</span><span class="desc">Tap <span class="desc-sub">quick</span></span></div>
+      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">2s</span></span></div>
+      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">10s</span></span></div>
+    </div>
+    <div class="help-section">
+      <div class="title">⌨️ Keyboard</div>
+      <div class="help-row"><span class="gesture">␣/↵</span><span class="arrow">→</span><span class="desc">Select</span></div>
+      <div class="help-row"><span class="gesture">Esc</span><span class="arrow">→</span><span class="desc">Back</span></div>
+    </div>
+    <div style="text-align:center;margin-top:12px"><a href="../guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a></div>
+    <button class="help-close" onclick="hideHelp()">Got it</button>
+  </div>
+</div>
+
+<div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+const COLORS = ['#FF6B6B','#4ECDC4','#FFE66D','#A8E6CF','#FF8A80','#82B1FF','#B388FF','#FF80AB','#69F0AE'];
+const WORDS = ['POP!','WOW!','YAY!','BOOM!','FUN!','YES!'];
+let score = 0;
+let gameActive = false;
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('balloonContainer').style.display = 'flex';
+  gameActive = true;
+  score = 0;
+  document.getElementById('balloonContainer').innerHTML = '';
+  spawnBalloons(5);
+}
+
+function spawnBalloons(count) {
+  const container = document.getElementById('balloonContainer');
+  for (let i = 0; i < count; i++) {
+    const b = document.createElement('div');
+    b.className = 'balloon';
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    b.style.background = `radial-gradient(circle at 30% 30%, ${lighten(color, 40)}, ${color})`;
+    b.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
+    b.style.animationDelay = `${Math.random() * 2}s`;
+    b.dataset.popped = 'false';
+    b.addEventListener('click', () => pop(b));
+    container.appendChild(b);
+  }
+}
+
+function lighten(hex, pct) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, (n>>16)+Math.floor(255*pct/100));
+  const g = Math.min(255, ((n>>8)&255)+Math.floor(255*pct/100));
+  const b = Math.min(255, (n&255)+Math.floor(255*pct/100));
+  return `rgb(${r},${g},${b})`;
+}
+
+function pop(balloon) {
+  if (balloon.dataset.popped === 'true') return;
+  balloon.dataset.popped = 'true';
+
+  const big = document.createElement('div'); big.className = 'big-pop'; big.textContent = '💥';
+  document.body.appendChild(big); setTimeout(() => big.remove(), 500);
+
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => {
+      const c = document.createElement('div'); c.className = 'confetti';
+      c.textContent = ['✨','⭐','🌟','💫','🎉','🎊'][Math.floor(Math.random()*6)];
+      c.style.left = `${Math.random()*80+10}%`; c.style.top = `${Math.random()*40+30}%`;
+      document.body.appendChild(c); setTimeout(() => c.remove(), 1500);
+    }, i * 50);
+  }
+
+  balloon.classList.add('pop');
+  score++;
+  setTimeout(() => {
+    balloon.remove();
+    const remaining = document.querySelectorAll('.balloon:not(.pop)').length;
+    if (remaining <= 1) spawnBalloons(3);
+  }, 300);
+}
+
+function popRandomBalloon() {
+  const balloons = document.querySelectorAll('.balloon:not([data-popped="true"])');
+  if (balloons.length === 0) { spawnBalloons(5); return; }
+  pop(balloons[Math.floor(Math.random() * balloons.length)]);
+}
+
+function handleAction() {
+  if (!gameActive) { startGame(); return; }
+  popRandomBalloon();
+}
+
+// Touch switch
+let touchStart = 0, holdInt = null, holdFired = false;
+document.documentElement.addEventListener('touchstart', function(e) {
+  if (touchStart) return;
+  if (e.target.closest('.balloon')) return; // let clicks work
+  e.preventDefault();
+  touchStart = Date.now(); holdFired = false;
+  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    document.getElementById('holdFill').style.width = Math.min(100, (elapsed/10)*100) + '%';
+    if (elapsed >= 10 && !holdFired) {
+      holdFired = true; clearInterval(holdInt); holdInt = null;
+      document.getElementById('holdFill').style.width = '100%';
+      document.getElementById('holdStatus').textContent = '×'; document.getElementById('holdStatus').classList.add('show');
+      setTimeout(() => { window.location.href = 'index.html'; }, 300);
+    } else if (elapsed >= 2 && !holdFired) {
+      document.getElementById('holdStatus').textContent = 'Hold...'; document.getElementById('holdStatus').classList.add('show');
+    }
+  }, 50);
+}, { passive: false });
+
+document.documentElement.addEventListener('touchend', function(e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
+  fill.style.width = '0%'; status.classList.remove('show');
+  if (holdFired) { holdFired = false; return; }
+  if (elapsed >= 2) {
+    gameActive = false;
+    document.getElementById('balloonContainer').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'block';
+    document.getElementById('balloonContainer').innerHTML = '';
+  } else {
+    handleAction();
+  }
+}, { passive: true });
+
+document.documentElement.addEventListener('touchcancel', function(e) {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0;
+  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
+  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
+}, { passive: true });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
+  e.preventDefault();
+  handleAction();
+});
+
+function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
+function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+</script>
+</body>
+</html>
