@@ -256,6 +256,47 @@
   .auth-btn .avatar { width: 22px; height: 22px; border-radius: 50%; }
   .auth-btn.signed-in { background: #4A7BC4; color: #fff; border-color: #4A7BC4; }
 
+  /* === DEDICATION === */
+  .dedication-section {
+    max-width: 500px;
+    width: 100%;
+    padding: 6px 16px 2px;
+    text-align: center;
+    border-top: 1px solid #e0dcd0;
+    flex-shrink: 0;
+  }
+  .dedication-inner {
+    padding: 10px 20px;
+    border-radius: 12px;
+  }
+  .dedication-label {
+    font-size: clamp(0.55rem, 1.6vw, 0.65rem);
+    color: #b0a8a0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .dedication-name {
+    font-size: clamp(1rem, 3.5vw, 1.3rem);
+    color: #4A7BC4;
+    font-weight: 700;
+    margin-bottom: 0;
+    line-height: 1.2;
+  }
+  .dedication-dates {
+    font-size: clamp(0.7rem, 2vw, 0.8rem);
+    color: #b0a8a0;
+    margin-bottom: 4px;
+  }
+  .dedication-text {
+    font-size: clamp(0.7rem, 2.2vw, 0.8rem);
+    color: #888;
+    line-height: 1.4;
+    font-style: italic;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
   /* === FEEDBACK MODAL === */
   .feedback-overlay {
     display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -370,6 +411,15 @@
   <a href="guide.html" style="display:inline-block;margin-top:6px;color:#4A7BC4;text-decoration:none;font-weight:600;font-size:clamp(0.75rem,2.5vw,0.9rem)">▶️ How to use (guided tour)</a><br>
   <a href="#" onclick="event.preventDefault();openFeedback()" style="color:#4A7BC4;text-decoration:none;font-weight:600;font-size:clamp(0.75rem,2.5vw,0.9rem)">💬 Send feedback</a>
   · <a href="https://github.com/bestpolity-llc/switch-access" target="_blank" style="color:#A0927A;text-decoration:none;font-size:clamp(0.7rem,2vw,0.8rem)">📖 View source</a>
+</div>
+
+<div class="dedication-section">
+  <div class="dedication-inner">
+    <div class="dedication-label">Dedicated to</div>
+    <div class="dedication-name">Joe Caffery</div>
+    <div class="dedication-dates">1981 — 2026</div>
+    <div class="dedication-text">Friend, student, and the reason this project exists.</div>
+  </div>
 </div>
 
 <button class="help-btn" onclick="showHelp()">?</button>
