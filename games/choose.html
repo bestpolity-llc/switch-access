@@ -169,6 +169,9 @@
   }
   .help-close:active { background: #555; }
 </style>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div class="game-area">
@@ -389,5 +392,7 @@ document.addEventListener('keydown', (e) => {
 function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
 function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
 </script>
+<script src="../firebase-init.js"></script>
+<script src="../switchmate-tracker.js"></script>
 </body>
 </html>

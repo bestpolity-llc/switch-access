@@ -1,0 +1,77 @@
+// ============================================================
+// SwitchMate Analytics Tracker
+// Writes page view events to Firestore for dashboard consumption.
+// Include after firebase-init.js on any page you want tracked.
+// ============================================================
+
+(function() {
+  const TRACKING_COLLECTION = 'switchmate_analytics';
+  const PAGE_NAME = getPageName();
+  const SESSION_KEY = 'switchmate_session_id';
+
+  function getPageName() {
+    const path = window.location.pathname;
+    const file = path.split('/').pop();
+    if (!file || file === '' || file === 'index.html') return 'home';
+    return file.replace('.html', '');
+  }
+
+  function getSessionId() {
+    let sid = sessionStorage.getItem(SESSION_KEY);
+    if (!sid) {
+      sid = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      sessionStorage.setItem(SESSION_KEY, sid);
+    }
+    return sid;
+  }
+
+  function trackPageView() {
+    // Wait for Firebase to be ready
+    function tryTrack() {
+      try {
+        if (typeof DB === 'undefined' || typeof firebase === 'undefined') {
+          // Firebase not loaded yet — retry
+          setTimeout(tryTrack, 500);
+          return;
+        }
+
+        const entry = {
+          page: PAGE_NAME,
+          sessionId: getSessionId(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          userAgent: navigator.userAgent.slice(0, 200),
+          referrer: document.referrer.slice(0, 500) || '',
+          viewport: `${window.innerWidth}x${window.innerHeight}`,
+        };
+
+        // Add user id if signed in
+        if (typeof currentUser !== 'undefined' && currentUser) {
+          entry.uid = currentUser.uid;
+          entry.email = currentUser.email || '';
+        }
+
+        DB.collection(TRACKING_COLLECTION).add(entry)
+          .then(function() {
+            // Silently tracked
+          })
+          .catch(function(err) {
+            // Fail silently — tracking is non-critical
+            console.debug('[SwitchMate] Track failed:', err.message);
+          });
+      } catch (e) {
+        // Fail silently
+        console.debug('[SwitchMate] Track error:', e.message);
+      }
+    }
+
+    // Try immediately, with retries
+    tryTrack();
+  }
+
+  // Track on page load
+  if (document.readyState === 'complete') {
+    trackPageView();
+  } else {
+    window.addEventListener('load', trackPageView);
+  }
+})();
