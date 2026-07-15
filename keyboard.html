@@ -209,6 +209,116 @@
     .text-area { padding: 10px 14px; min-height: 70px; }
   }
 
+  /* === DARK MODE === */
+  body.dark {
+    --bg: #12121f;
+    --text: #e8e8f0;
+    --key: #1e1e30;
+    --key-border: #3a3a55;
+  }
+  body.dark .text-area { background: #1a1a2c; border-color: #33334d; }
+  body.dark .text-display:empty::before { color: #555; }
+  body.dark .text-actions button { background: #2a2a40; color: #bbb; }
+  body.dark .scan-bar { background: #2a2a40; }
+  body.dark .pred-btn { background: #1e1e30; border-color: #3a3a55; color: var(--text); }
+  body.dark .pred-btn:active { background: #2a2a40; }
+  body.dark .key.scan-row { background: #14283f; }
+  body.dark .key.scan-col { background: #143f28; }
+  body.dark .layers button { background: #2a2a40; border-color: #3a3a55; color: #999; }
+  body.dark .layers button.active { background: #e8e8f0; border-color: #e8e8f0; color: #12121f; }
+  body.dark .settings-panel, body.dark .help-box { background: #1a1a2c; }
+  body.dark .setting-opt { background: #22223a; border-color: #3a3a55; }
+  body.dark .setting-opt .lbl { color: #bbb; }
+  body.dark .setting-opt.scanning { background: #14283f; }
+  body.dark .setting-opt.on { background: #143f28; }
+  body.dark .setting-opt.off { background: #3f1420; }
+  body.dark .help-btn { background: #2a2a40; border-color: #3a3a55; color: #999; }
+  body.dark .help-box h2, body.dark .settings-panel h3 { color: var(--text); }
+
+  /* === CAREGIVER PANEL === */
+  .cg-btn {
+    position: fixed;
+    top: 16px; right: 16px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: #764ba2;
+    border: 2px solid #8a5fb8;
+    color: #fff;
+    font-size: 1.6rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 50;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    animation: cgPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes cgPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(118,75,162,0.55); }
+    50% { box-shadow: 0 0 0 12px rgba(118,75,162,0); }
+  }
+  .cg-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 300;
+    justify-content: center; align-items: center;
+    padding: 16px;
+  }
+  .cg-overlay.show { display: flex; }
+  .cg-panel {
+    background: #fff;
+    border-radius: 24px;
+    padding: 22px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 90dvh;
+    overflow-y: auto;
+    touch-action: pan-y;
+  }
+  body.dark .cg-panel { background: #1a1a2c; }
+  .cg-panel h3 { text-align: center; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .cg-panel .sub { text-align: center; font-size: 0.82rem; color: #888; margin-bottom: 16px; }
+  .cg-row { margin-bottom: 16px; }
+  .cg-row .lbl { font-weight: 700; font-size: 0.95rem; color: var(--text); display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .cg-row .lbl .cur { color: #764ba2; }
+  body.dark .cg-row .lbl .cur { color: #b490e0; }
+  .cg-presets { display: flex; gap: 8px; }
+  .cg-presets button {
+    flex: 1; padding: 12px 4px;
+    border-radius: 12px;
+    border: 3px solid #d0d5e0;
+    background: #fafbfc;
+    color: var(--text);
+    font-weight: 700; font-size: 0.9rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  body.dark .cg-presets button { background: #22223a; border-color: #3a3a55; }
+  .cg-presets button.sel { border-color: #764ba2; background: #f3ecfb; }
+  body.dark .cg-presets button.sel { background: #2d2245; }
+  .cg-slider { width: 100%; accent-color: #764ba2; height: 36px; }
+  .cg-toggle {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px;
+    border: 3px solid #d0d5e0; border-radius: 14px;
+    background: #fafbfc;
+    font-weight: 700; color: var(--text);
+    cursor: pointer; touch-action: manipulation;
+    margin-bottom: 10px;
+  }
+  body.dark .cg-toggle { background: #22223a; border-color: #3a3a55; }
+  .cg-toggle.on { border-color: #43e97b; }
+  .cg-toggle .state { font-weight: 800; color: #f5576c; }
+  .cg-toggle.on .state { color: #2fc963; }
+  .cg-close {
+    width: 100%; padding: 16px;
+    border-radius: 14px; border: none;
+    background: #764ba2; color: #fff;
+    font-size: 1.1rem; font-weight: 800;
+    cursor: pointer; touch-action: manipulation;
+    margin-top: 6px;
+  }
+
   /* === SETTINGS DIALOG (big, simple, scanable) === */
   .settings-dialog {
     display: none;
@@ -491,6 +601,42 @@
   <div class="settings-panel" id="settingsPanel"></div>
 </div>
 
+<!-- Caregiver quick-setup (touch/mouse only — not in scan loop) -->
+<button class="cg-btn" id="cgBtn" onclick="openCaregiver()" title="Caregiver setup">🛠</button>
+<div class="cg-overlay" id="cgOverlay">
+  <div class="cg-panel">
+    <h3>🛠 Caregiver Setup</h3>
+    <div class="sub">Quick settings — changes apply instantly</div>
+
+    <div class="cg-row">
+      <div class="lbl"><span>Scan speed</span><span class="cur" id="cgSpeedVal"></span></div>
+      <div class="cg-presets" id="cgSpeedPresets">
+        <button data-ms="2500">🐢 Relaxed<br>2.5s</button>
+        <button data-ms="1800">🚶 Steady<br>1.8s</button>
+        <button data-ms="1200">🏃 Quick<br>1.2s</button>
+        <button data-ms="800">⚡ Fast<br>0.8s</button>
+      </div>
+      <input type="range" class="cg-slider" id="cgSpeedSlider" min="500" max="4000" step="100">
+    </div>
+
+    <div class="cg-row">
+      <div class="lbl"><span>Hold to cancel</span><span class="cur" id="cgHoldVal"></span></div>
+      <input type="range" class="cg-slider" id="cgHoldSlider" min="1" max="5" step="0.5">
+    </div>
+
+    <div class="cg-toggle" id="cgDark" onclick="cgToggle('dark')">
+      <span>🌙 Dark mode</span><span class="state">OFF</span>
+    </div>
+    <div class="cg-toggle" id="cgSpeak" onclick="cgToggle('speak')">
+      <span>🔊 Speak letters</span><span class="state">OFF</span>
+    </div>
+
+    <button class="cg-close" onclick="closeCaregiver()">✓ Done</button>
+  </div>
+</div>
+
+<script src="predict-data.js"></script>
+<script src="predict.js"></script>
 <script>
 // ============================================================
 // STATE
@@ -498,7 +644,7 @@
 const state = {
   text: '',
   layer: 'letters',
-  scanSpeed: 1200,
+  scanSpeed: 1800,
   scanMode: 'row',
   scanning: true,
   currentRow: 0,
@@ -548,226 +694,13 @@ const LAYERS = {
 };
 
 // ============================================================
-// WORD PREDICTION — top ~2000 common words
+// WORD PREDICTION — statistical engine (predict.js)
+// Bigram context + corpus frequency + personal adaptation.
 // ============================================================
-const COMMON_WORDS = [
-  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at',
-  'this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there',
-  'their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no',
-  'just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then',
-  'now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well',
-  'way','even','new','want','because','any','these','give','day','most','us','great','say','each','tell','very',
-  'here','call','ask','need','feel','house','try','help','around','too','still','last','long','show','much','before',
-  'turn','play','though','real','best','right','through','own','put','thing','place','end','hand','big','high',
-  'might','such','old','while','off','same','let','number','open','live','walk','start','always','next','something',
-  'night','point','small','head','stand','own','home','found','should','seem','side','man','move','world','letter',
-  'mother','answer','follow','father','again','change','never','between','different','away','another',
-  'three','learn','school','state','family','group','always','keep','children','begin','country','city','run',
-  'set','example','door','dark','hard','light','morning','music','power','room','white','young','face','food',
-  'often','body','close','far','open','child','earth','form','hand','enough','woman','car','watch','free',
-  'second','water','course','area','during','leave','together','company','money','service','friend',
-  'important','love','person','business','information','question','word','program','need','paper','minute',
-  'thing','line','government','part','number','case','week','problem','fact','system',
-  'member','community','picture','support','report','special','five','local','early','field','interest','public',
-  'office','plan','resource','experience','result','moment','practice','study','center','book','order','art',
-  'nature','subject','design','space','class','control','value','science','able','allow','produce','lead',
-  'continue','add','develop','include','several','present','position','realize','create','provide','process',
-  'consider','figure','remember','hold','produce','hear','happen','write','sit','stand','lose','pay','meet',
-  'include','continue','set','learn','change','lead','understand','watch','follow','stop','create','speak',
-  'read','allow','add','spend','grow','open','walk','win','teach','offer','remember','love','consider','appear',
-  'buy','wait','serve','die','send','expect','build','stay','fall','cut','reach','kill','remain','suggest',
-  'raise','pass','sell','require','report','decide','pull','carry','hope','discuss','return','explain','support',
-  'push','accept','agree','choose','demand','smile','draw','drop','finish','save','mark','sign','drink',
-  'occur','paint','thank','affect','respond','suppose','escape','display','share','fill','pick','wonder',
-  'identify','receive','describe','protect','threaten','collect','prepare','perform','manage','determine',
-  'establish','achieve','recognize','indicate','represent','claim','reduce','relate','refer','reflect','replace',
-  'demonstrate','discuss','distinguish','contribute','emerge','engage','improve','introduce','investigate',
-  'maintain','pursue','reveal','transform','adopt','confirm','criticize','define','express','implement',
-  'interpret','participate','promote','publish','strengthen','summarize','undermine','assess','clarify',
-  'comprise','conceive','constitute','construct','convey','cultivate','devise','diminish','disclose','display',
-  'dissolve','dominate','elaborate','eliminate','embrace','enable','encompass','enforce','enhance','envision',
-  'evaluate','examine','exceed','execute','expand','exploit','explore','facilitate','formulate','foster',
-  'generate','highlight','hypothesize','illustrate','immerse','incorporate','initiate','innovate','inspect',
-  'integrate','intervene','isolate','justify','manipulate','maximize','minimize','monitor','negotiate','obtain',
-  'optimize','orchestrate','outline','overcome','overlook','perceive','persist','pinpoint','pioneer','portray',
-  'postulate','precede','prescribe','preserve','presume','prioritize','proclaim','profess','prohibit','project',
-  'propel','propose','prosper','protest','provoke','quantify','question','radiate','rationalize','reactivate',
-  'rebuild','reconsider','reconstruct','rectify','redesign','regulate','rehabilitate','reinforce','reinterpret',
-  'rejuvenate','remediate','reorganize','replicate','reproduce','reshape','resolve','restore','restructure',
-  'retain','retrieve','revitalize','revolutionize','scrutinize','simplify','stabilize','stimulate','streamline',
-  'substantiate','synthesize','systematize','troubleshoot','utilize','visualize','accommodate','accumulate',
-  'administer','advocate','alleviate','allocate','amplify','animate','anticipate','appreciate','articulate',
-  'assimilate','authorize','brainstorm','categorize','collaborate','commemorate','communicate','compensate',
-  'complement','complicate','comprehend','compromise','concentrate','conceptualize','confront','congregate',
-  'consolidate','contemplate','coordinate','correlate','corroborate','counteract','decentralize','decompose',
-  'dedicate','delegate','deliberate','demonopolize','depreciate','destabilize','deteriorate','determine',
-  'differentiate','discontinue','discriminate','disintegrate','disproportionate','disseminate','distribute',
-  'diversify','document','domesticate','duplicate','economize','editorialize','educate','effectuate',
-  'electrify','elevate','emancipate','empathize','empower','emulate','encapsulate','encompass','encourage',
-  'endanger','endorse','energize','engage','engineer','enhance','enlighten','enrich','envision',
-  'equalize','equilibrate','eradicate','escalate','establish','estimate','evacuate','evangelize','evaporate',
-  'exaggerate','excel','exchange','exclude','exemplify','exert','exhibit','exonerate','expedite','experiment',
-  'expire','explicate','expose','extend','exterminate','extinguish','extract','extrapolate','fabricate',
-  'familiarize','federate','fertilize','finalize','financier','flourish','fluctuate','forecast','formulate',
-  'fortify','fossilize','fractionalize','franchise','frequent','fructify','frustrate','fulfill','furnish',
-  'galvanize','garnish','generalize','generate','germinate','gestate','globalize','glorify','govern','graduate',
-  'gratify','gravitate','guarantee','habituate','harmonize','harness','hibernate','hierarchize','homogenize',
-  'horrify','humanize','humidify','hybridize','hypnotize','hypothesize','idealize','identify','ideologize',
-  'ignite','illuminate','illustrate','imagine','immerse','immobilize','immortalize','immunize','impair',
-  'impart','impede','implement','implicate','import','impose','impoverish','improvise','inaugurate','incarnate',
-  'incentivize','incinerate','incline','incorporate','increment','incubate','indemnify','indicate','indict',
-  'indoctrinate','induce','industrialize','infiltrate','inflame','inflate','inflect','influence','inform',
-  'infringe','infuse','inhabit','inhibit','initiate','inject','innovate','inoculate','input','inquire',
-  'inscribe','insert','insinuate','insist','inspect','inspire','install','instantiate','institute','instruct',
-  'insulate','insult','insure','integrate','intellectualize','intensify','interact','intercept','interchange',
-  'interconnect','interfere','interject','interlace','interlink','interlock','interlude','intermingle',
-  'intermittent','internalize','interpolate','interpret','interrelate','interrogate','interrupt','intersect',
-  'intertwine','intervene','interview','intimate','intimidate','intoxicate','introduce','intrude','intuit',
-  'inundate','invalidate','invent','inventory','invert','invest','investigate','invigorate','invite','invoke',
-  'involve','ionize','irradiate','irrigate','irritate','isolate','itemize','iterate',
-  'jeopardize','jettison','jubilate','judge','juggle','justify','juxtapose','kidnap','kindle','knit','label',
-  'labor','lament','laminar','landscape','languish','launch','launder','lavish','legislate','legitimize',
-  'lengthen','leverage','levitate','liberalize','liberate','license','lighten','limit',
-  'linger','liquidate','list','litigate','localize','locate','lodge',
-  'lubricate','lure','magnetize','magnify','maintain','manage','mandate',
-  'maneuver','manifest','manipulate','manufacture','map','marginalize','marinate','market','marshal',
-  'master','match','materialize','maximize','measure','mechanize','mediate','meditate',
-  'mellow','melt','memorize','menace','mention','mentor','merge','mesh',
-  'migrate','militarize','mimic','mince','mind','mingle',
-  'miniaturize','minimize','minister','moderate','modernize','modify','modulate','moisten','mold','monitor',
-  'monopolize','motivate','mount','mourn','move','muddle','muffle','multiply','murmur','muse',
-  'mutate','mystify','name','narrate','narrow','nationalize','navigate','necessitate',
-  'negate','negotiate','nest','net','network','neutralize',
-  'nominate','normalize','notice','notify','nourish','nurture','obey',
-  'observe','obsolete','obstruct','obtain','obviate','occasion','occupy','offend','offer',
-  'offset','operate','oppose','oppress','optimize','orchestrate','ordain','order','organize',
-  'orient','originate','ornament','oscillate','outline',
-  'outpace','outperform','outshine','outsmart','outsource',
-  'overcome','overflow','overhaul','overhear','overlap','overload','overlook','overrule','oversee',
-  'overtake','overthrow','overturn','overwhelm','owe','own',
-  'pace','pacify','pack','page','paint','pair','parade','parallel','paraphrase','pardon','parent',
-  'parse','participate','partner','pass','paste','pat','patch','pause','pave','pay',
-  'peek','peel','peer','penetrate','perceive','perfect','perform','permit',
-  'persist','personify','persuade','pertain','peruse','phase','phone','photograph','phrase','pick',
-  'picture','piece','pile','pin','pinpoint','pioneer','place','plan','plant','play',
-  'plead','please','pledge','plot','plug','plunge','point',
-  'polish','pollute','populate','portray','pose','position','possess','post','postpone',
-  'pour','practice','praise','pray','preach','precede','predict','prefer',
-  'prepare','prescribe','preserve','press','presume','pretend','prevail','prevent','preview',
-  'price','print','prioritize','probe','proceed','process','proclaim','procrastinate','procure','produce',
-  'program','progress','prohibit','project','proliferate','promise','promote',
-  'prompt','pronounce','proof','propagate','propel','propose','prosecute','prospect','prosper',
-  'protect','protest','prove','provide','provoke','pry','publish','pull','pump','punch',
-  'punish','purchase','purge','purify','pursue','push','put','puzzle',
-  'qualify','quantify','quarter','quash','query','question','queue','quicken','quiet','quit','quiz','quote',
-  'race','radiate','raise','rally','range','rank','rate','ratify','reach','react','read','ready',
-  'realign','realize','reap','reason','reassure','reboot','rebound','rebuild','recall','recap',
-  'receive','recite','reckon','reclaim','recognize','recommend','reconnect','reconsider','reconstruct',
-  'record','recover','recreate','recruit','rectify','recycle','redesign','reduce',
-  'refer','refine','reflect','reform','refresh','refund','refurbish','refuse','refute',
-  'regain','regard','register','regret','regroup','regulate','rehabilitate','rehearse',
-  'reimburse','reinforce','reinstall','reinvent','reiterate','reject','rejoice','relate','relax','relay',
-  'release','relieve','rely','remain','remake','remark','remedy','remember','remind','remix','remodel',
-  'remove','rename','render','renew','renovate','reopen','reorganize','repair','repeat','replace',
-  'replenish','replicate','reply','report','represent','reprint','reproduce',
-  'request','require','rescue','research','resemble','resent','reserve','reside','resign','resist',
-  'resolve','resonate','respect','respond','rest','restart','restore','restrain','restrict','restructure',
-  'result','resume','resurface','resurrect','retail','retain','retaliate','retire','retract','retrain',
-  'retreat','retrieve','return','reunite','reveal','reverse','revert','review','revise','revitalize',
-  'revive','revoke','revolt','revolutionize','revolve','reward','rewind','reword','rewrite',
-  'ride','ring','rinse','rip','ripple','rise','risk','rival','roam','roar','rob','rock','roll',
-  'root','rope','rot','rotate','rough','round','rouse','route','row','rub','ruin','rule',
-  'rumble','run','rush','rust','sabotage','sacrifice','safeguard','sail','satisfy','save',
-  'scare','scatter','schedule','score','scream','seal','search','secure','see','seek','select','sell',
-  'send','sense','separate','serve','set','settle','shade','shake','shape','share','shatter','shed',
-  'shelter','shift','shine','ship','shock','shoot','shop','shore','shorten','shout','show','shrink',
-  'shut','shuttle','sigh','sign','signal','simplify','simulate','sing','sink','sit','situate','size',
-  'sketch','skill','skip','slap','sleep','slice','slide','slip','slow','smash','smell','smile','smoke',
-  'smooth','snap','sneak','sneeze','sniff','soak','solve','soothe','sort','sound','source',
-  'sow','space','span','spark','sparkle','spawn','speak','specify','speed','spell','spend',
-  'spill','spin','spit','splash','split','spoil','sponsor','spot','spray','spread','spring','sprinkle',
-  'sprint','spur','squash','squeeze','stab','stabilize','stack','staff','stage','stagger','stain',
-  'stake','stall','stamp','stand','standardize','stare','start','startle','starve','state','station',
-  'stay','steady','steal','steam','steep','steer','stem','step','stereotype','stick','stiffen',
-  'stifle','stimulate','sting','stink','stir','stitch','stock','stoke','stop','store','storm','stow',
-  'straighten','strain','strand','stream','streamline','strengthen','stress','stretch','strike','string',
-  'strip','strive','stroke','structure','struggle','stuff','stumble','stun','style',
-  'subdue','subject','submit','subscribe','subsidize','substitute','subtract',
-  'succeed','suck','sue','suffer','suffice','suggest','suit','summarize','summon','supply','support',
-  'suppose','surge','surmount','surpass','surprise','surrender','surround','survey','survive',
-  'suspect','suspend','sustain','swallow','swamp','sway','swear','sweat','sweep','swell',
-  'swerve','swim','swing','switch','symbolize','sympathize','synchronize',
-  'synthesize','tackle','tag','tailor','take','talk','tally','tamper','tap','tape','target',
-  'taste','tax','teach','team','tear','tease','tell','tempt','tend','tense',
-  'term','terminate','terrify','test','testify','thank','thaw','theorize','thicken','think',
-  'thirst','thorough','thrash','thread','threaten','thrill','thrive','throttle','throw','thrust',
-  'thump','thunder','tick','ticket','tidy','tie','tighten','till','tilt','time','tingle','tint','tip',
-  'tire','toast','toggle','tolerate','tone','tool','top','topple','torch','torture',
-  'toss','total','touch','tour','tow','tower','trace','track','trade','traffic','trail',
-  'train','transfer','transform','transit','translate','transmit','transplant','transport','trap',
-  'trash','travel','treat','trek','tremble','trend','trial','trick','trigger','trim','trip',
-  'triumph','trouble','truck','trudge','trust','try','tuck','tug','tumble','tune','tunnel','turn',
-  'tutor','tweak','twist','type','ultimately','uncover','undergo','undermine',
-  'understand','undertake','undo','unfold','unify','unite','unlock','unpack','unravel',
-  'unveil','unwind','update','upgrade','uphold','uplift','upload','upset','urge','use',
-  'utilize','utter','vacate','validate','value','vanish','vary','vault',
-  'vent','venture','verify','vibrate','view','violate','visit','visualize',
-  'voice','volunteer','vote','vouch','vow','voyage',
-  'wade','wag','wage','wait','waive','wake','walk','wander','want','warm','warn','warp',
-  'wash','waste','watch','water','wave','waver','weaken','wear','weave',
-  'weed','weigh','welcome','weld','well','wet','wheel','whine','whip','whirl','whisper','whistle',
-  'widen','wield','win','wince','wind','wink','wipe','wire','wise','wish','withdraw','wither',
-  'withhold','withstand','witness','wobble','wonder','woo','word','work','worry','worsen',
-  'worship','wound','wrap','wreck','wrench','wrestle','wring','wrinkle','write',
-  'yawn','yearn','yell','yield','yoke','zap','zero','zigzag','zone','zoom',
-  'i','me','my','myself','we','our','ours','ourselves','you','your','yours','yourself','yourselves','he','him',
-  'his','himself','she','her','hers','herself','it','its','itself','they','them','their','theirs','themselves',
-  'what','which','who','whom','this','that','these','those','am','is','are','was','were','been','being','have',
-  'has','had','having','do','does','did','doing','would','could','should','may','might','shall','can','need',
-  'dare','ought','used','will','a','an','the','and','but','or','because','as','until','while','of','at','by',
-  'for','with','about','against','between','into','through','during','before','after','above','below','from',
-  'up','down','in','out','on','off','over','under','again','further','then','once','here','there','when',
-  'where','why','how','all','each','every','both','few','more','most','other','some','such','no','nor','not',
-  'only','own','same','so','than','very','just','because','but','and','or','if','though','while','until',
-  'after','before','when','unless','since','although','whether','however','therefore','thus','maybe',
-  'please','yes','no','hello','goodbye','thanks','sorry','please','help','stop','go','wait'
-];
-
-function buildTrie(words) {
-  const trie = {};
-  for (const word of words) {
-    let node = trie;
-    for (const ch of word.toLowerCase()) {
-      if (!node[ch]) node[ch] = {};
-      node = node[ch];
-    }
-    node.$ = true;
-  }
-  return trie;
-}
-
 function getPredictions(prefix, maxResults = 3) {
-  if (!prefix || prefix.length === 0) return [];
-  const lower = prefix.toLowerCase();
-  let node = TRIE;
-  for (const ch of lower) {
-    if (!node[ch]) return [];
-    node = node[ch];
-  }
-  const results = [];
-  function dfs(n, path) {
-    if (results.length >= maxResults) return;
-    if (n.$) results.push(prefix + path);
-    for (const ch of Object.keys(n).filter(k => k !== '$')) {
-      if (results.length >= maxResults) return;
-      dfs(n[ch], path + ch);
-    }
-  }
-  dfs(node, '');
-  return results.slice(0, maxResults);
+  // Predictor uses full text for context; prefix arg kept for compat
+  try { return Predictor.predict(state.text, maxResults); } catch (e) { return []; }
 }
-
-const TRIE = buildTrie(COMMON_WORDS);
 
 // ============================================================
 // RENDER
@@ -897,9 +830,7 @@ function getCurrentWord() {
 
 function updatePredictions() {
   const container = document.getElementById('predictions');
-  const prefix = getCurrentWord();
-  if (!prefix || prefix.length === 0) { container.innerHTML = ''; return; }
-  const preds = getPredictions(prefix, 3);
+  const preds = getPredictions(getCurrentWord(), 3);
   container.innerHTML = preds.map((w, i) =>
     `<div class="pred-btn" onclick="acceptPrediction('${w}')">${w}</div>`
   ).join('');
@@ -907,8 +838,14 @@ function updatePredictions() {
 
 function acceptPrediction(word) {
   const prefix = getCurrentWord();
-  const suffix = word.slice(prefix.length);
-  state.text += suffix + ' ';
+  if (prefix && word.toLowerCase().startsWith(prefix.toLowerCase())) {
+    // completion: append the missing suffix
+    state.text += word.slice(prefix.length) + ' ';
+  } else {
+    // next-word prediction: append whole word
+    if (state.text && !/\s$/.test(state.text)) state.text += ' ';
+    state.text += word + ' ';
+  }
   updateText();
   updatePredictions();
 }
@@ -993,6 +930,7 @@ initBuiltInAI();
 // ============================================================
 function speakText() {
   if (!state.text.trim()) return;
+  try { Predictor.learn(state.text); } catch (e) {}
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(state.text);
@@ -1032,8 +970,9 @@ function loadSettings() {
   if (speed) state.scanSpeed = parseInt(speed);
   if (localStorage.getItem('switchaac_ai') === '1') state.aiEnabled = true;
   if (localStorage.getItem('switchaac_speak') === '1') state.speakOnType = true;
-  state.holdCancel = parseInt(localStorage.getItem('switchaac_holdCancel')) || 2;
+  state.holdCancel = parseFloat(localStorage.getItem('switchaac_holdCancel')) || 2;
   state.holdExit = parseInt(localStorage.getItem('switchaac_holdExit')) || 10;
+  if (localStorage.getItem('switchaac_dark') === '1') document.body.classList.add('dark');
 }
 
 function saveSettings() {
@@ -1041,6 +980,7 @@ function saveSettings() {
   localStorage.setItem('switchaac_ai', state.aiEnabled ? '1' : '0');
   localStorage.setItem('switchaac_speak', state.speakOnType ? '1' : '0');
   localStorage.setItem('switchaac_holdCancel', state.holdCancel);
+  localStorage.setItem('switchaac_dark', document.body.classList.contains('dark') ? '1' : '0');
   localStorage.setItem('switchaac_holdExit', state.holdExit);
 }
 
@@ -1068,13 +1008,13 @@ function renderSettings() {
   const s = state;
   document.getElementById('settingsPanel').innerHTML = `
     <h3>Settings</h3>
-    <div class="setting-opt" data-action="speed-down" onclick="adjustSpeed(-100)">
-      <span class="lbl">Speed</span>
-      <span class="val">${s.scanSpeed}ms</span>
+    <div class="setting-opt" data-action="speed-down" onclick="adjustSpeed(200)">
+      <span class="lbl">🐢 Slower</span>
+      <span class="val">${(s.scanSpeed / 1000).toFixed(1)}s</span>
     </div>
-    <div class="setting-opt" data-action="speed-up" onclick="adjustSpeed(100)">
-      <span class="lbl">Speed +</span>
-      <span class="val">+100</span>
+    <div class="setting-opt" data-action="speed-up" onclick="adjustSpeed(-200)">
+      <span class="lbl">🐇 Faster</span>
+      <span class="val">${(s.scanSpeed / 1000).toFixed(1)}s</span>
     </div>
     <div class="setting-opt ${s.speakOnType ? 'on' : 'off'}" data-action="toggle-speak" onclick="toggleSpeak()">
       <span class="lbl">Sound</span>
@@ -1128,10 +1068,11 @@ function selectSettingsOption() {
 }
 
 function adjustSpeed(delta) {
-  state.scanSpeed = Math.max(200, Math.min(3000, state.scanSpeed + delta));
+  state.scanSpeed = Math.max(500, Math.min(4000, state.scanSpeed + delta));
   const opts = getSettingOpts();
   opts.forEach(o => {
-    if (o.dataset.action === 'speed-down') o.querySelector('.val').textContent = state.scanSpeed + 'ms';
+    if (o.dataset.action === 'speed-down' || o.dataset.action === 'speed-up')
+      o.querySelector('.val').textContent = (state.scanSpeed / 1000).toFixed(1) + 's';
   });
   saveSettings();
 }
@@ -1185,16 +1126,66 @@ function updateText() { document.getElementById('textDisplay').textContent = sta
 // KEYBOARD INPUT
 // ============================================================
 document.addEventListener('keydown', (e) => {
+  const cgOpen = document.getElementById('cgOverlay').classList.contains('show');
   if (e.key === 'Escape') {
+    if (cgOpen) { closeCaregiver(); return; }
     if (state.inSettings) { closeSettings(); return; }
     window.location.href = 'index.html';
     return;
   }
+  if (cgOpen) return; // caregiver is typing/adjusting — don't treat keys as switch
   // Any other key = trigger select
   e.preventDefault();
   if (state.inSettings) { selectSettingsOption(); return; }
   if (!state.scanning) { startScan(); return; }
   selectCurrent();
+});
+
+// ============================================================
+// CAREGIVER PANEL — direct touch/mouse, outside the scan loop
+// ============================================================
+function cgRefresh() {
+  document.getElementById('cgSpeedVal').textContent = (state.scanSpeed / 1000).toFixed(1) + 's per step';
+  document.getElementById('cgSpeedSlider').value = state.scanSpeed;
+  document.querySelectorAll('#cgSpeedPresets button').forEach(b =>
+    b.classList.toggle('sel', parseInt(b.dataset.ms) === state.scanSpeed));
+  document.getElementById('cgHoldVal').textContent = state.holdCancel + 's';
+  document.getElementById('cgHoldSlider').value = state.holdCancel;
+  const dark = document.body.classList.contains('dark');
+  document.getElementById('cgDark').classList.toggle('on', dark);
+  document.getElementById('cgDark').querySelector('.state').textContent = dark ? 'ON' : 'OFF';
+  document.getElementById('cgSpeak').classList.toggle('on', state.speakOnType);
+  document.getElementById('cgSpeak').querySelector('.state').textContent = state.speakOnType ? 'ON' : 'OFF';
+}
+
+function openCaregiver() {
+  stopScan();
+  document.getElementById('cgOverlay').classList.add('show');
+  cgRefresh();
+}
+
+function closeCaregiver() {
+  document.getElementById('cgOverlay').classList.remove('show');
+  saveSettings();
+  startScan();
+}
+
+function cgToggle(which) {
+  if (which === 'dark') document.body.classList.toggle('dark');
+  else if (which === 'speak') state.speakOnType = !state.speakOnType;
+  saveSettings();
+  cgRefresh();
+}
+
+document.getElementById('cgSpeedPresets').addEventListener('click', e => {
+  const ms = e.target.closest('button')?.dataset.ms;
+  if (ms) { state.scanSpeed = parseInt(ms); saveSettings(); cgRefresh(); }
+});
+document.getElementById('cgSpeedSlider').addEventListener('input', e => {
+  state.scanSpeed = parseInt(e.target.value); saveSettings(); cgRefresh();
+});
+document.getElementById('cgHoldSlider').addEventListener('input', e => {
+  state.holdCancel = parseFloat(e.target.value); saveSettings(); cgRefresh();
 });
 
 // ============================================================
@@ -1205,7 +1196,7 @@ let touchStart = 0, holdInt = null, holdFired = false;
 document.documentElement.addEventListener('touchstart', function(e) {
   if (touchStart) return;
   // Let buttons work normally
-  if (e.target.closest('button') || e.target.closest('.settings-panel') || e.target.closest('.layers')) return;
+  if (e.target.closest('button') || e.target.closest('.settings-panel') || e.target.closest('.layers') || e.target.closest('.cg-panel')) return;
   // Skip keyboard keys (they have their own click handlers)
   if (e.target.closest('.key') || e.target.closest('.pred-btn')) return;
 
