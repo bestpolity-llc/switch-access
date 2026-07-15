@@ -5,6 +5,9 @@
 // ============================================================
 
 (function() {
+  // Respect the user's opt-out (set via caregiver panel on keyboard.html)
+  try { if (localStorage.getItem('switchaac_analytics') === '0') return; } catch (e) {}
+
   const TRACKING_COLLECTION = 'switchmate_analytics';
   const PAGE_NAME = getPageName();
   const SESSION_KEY = 'switchmate_session_id';

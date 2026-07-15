@@ -249,6 +249,7 @@ function recordLove(g) {
 // Global event feed → Firestore (same pipeline as switchmate-tracker)
 function logEvent(type, g) {
   try {
+    if (localStorage.getItem('switchaac_analytics') === '0') return;
     if (typeof DB === 'undefined') return;
     DB.collection('game_maker_events').add({
       type, seed: g.seed, name: g.name, mechanic: g.mechanic, theme: g.theme.name,

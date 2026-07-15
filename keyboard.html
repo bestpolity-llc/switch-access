@@ -630,6 +630,10 @@
     <div class="cg-toggle" id="cgSpeak" onclick="cgToggle('speak')">
       <span>🔊 Speak letters</span><span class="state">OFF</span>
     </div>
+    <div class="cg-toggle" id="cgStats" onclick="cgToggle('stats')">
+      <span>📊 Anonymous usage stats</span><span class="state">ON</span>
+    </div>
+    <div class="sub" style="margin:-4px 0 12px">Helps us improve SwitchMate. Typing &amp; predictions always stay on this device. <a href="privacy.html" style="color:#764ba2">Privacy</a></div>
 
     <button class="cg-close" onclick="closeCaregiver()">✓ Done</button>
   </div>
@@ -1156,6 +1160,9 @@ function cgRefresh() {
   document.getElementById('cgDark').querySelector('.state').textContent = dark ? 'ON' : 'OFF';
   document.getElementById('cgSpeak').classList.toggle('on', state.speakOnType);
   document.getElementById('cgSpeak').querySelector('.state').textContent = state.speakOnType ? 'ON' : 'OFF';
+  const stats = localStorage.getItem('switchaac_analytics') !== '0';
+  document.getElementById('cgStats').classList.toggle('on', stats);
+  document.getElementById('cgStats').querySelector('.state').textContent = stats ? 'ON' : 'OFF';
 }
 
 function openCaregiver() {
@@ -1173,6 +1180,10 @@ function closeCaregiver() {
 function cgToggle(which) {
   if (which === 'dark') document.body.classList.toggle('dark');
   else if (which === 'speak') state.speakOnType = !state.speakOnType;
+  else if (which === 'stats') {
+    const off = localStorage.getItem('switchaac_analytics') === '0';
+    localStorage.setItem('switchaac_analytics', off ? '1' : '0');
+  }
   saveSettings();
   cgRefresh();
 }

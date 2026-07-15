@@ -5,13 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SwitchMate — Switch Access</title>
 
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-K6HGF1692H"></script>
+<!-- Google tag (gtag.js) — skipped when usage stats are turned off -->
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-K6HGF1692H');
+  if (localStorage.getItem('switchaac_analytics') !== '0') {
+    const s = document.createElement('script');
+    s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=G-K6HGF1692H';
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-K6HGF1692H');
+  }
 </script>
 
 <style>
@@ -427,6 +431,7 @@
   <a href="guide.html" style="display:inline-block;margin-top:6px;color:#4A7BC4;text-decoration:none;font-weight:600;font-size:clamp(0.75rem,2.5vw,0.9rem)">▶️ How to use (guided tour)</a><br>
   <a href="#" onclick="event.preventDefault();openFeedback()" style="color:#4A7BC4;text-decoration:none;font-weight:600;font-size:clamp(0.75rem,2.5vw,0.9rem)">💬 Send feedback</a>
   · <a href="https://github.com/bestpolity-llc/switch-access" target="_blank" style="color:#A0927A;text-decoration:none;font-size:clamp(0.7rem,2vw,0.8rem)">📖 View source</a>
+  · <a href="privacy.html" style="color:#A0927A;text-decoration:none;font-size:clamp(0.7rem,2vw,0.8rem)">🔒 Privacy</a>
 </div>
 
 <div class="dedication-section">
