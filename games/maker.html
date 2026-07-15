@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Game Maker</title>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100dvh; overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent; touch-action: none;
+    background: var(--bg1, #1a1a2e);
+    color: #fff;
+    transition: background 0.6s;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    background: linear-gradient(180deg, var(--bg1,#1a1a2e), var(--bg2,#16213e));
+  }
+  .sprite { position: absolute; font-size: 56px; line-height: 1; will-change: transform;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
+  .particle { position: absolute; font-size: 24px; pointer-events: none; animation: burst 0.7s ease-out forwards; }
+  @keyframes burst {
+    to { transform: translate(var(--dx), var(--dy)) scale(0.2) rotate(180deg); opacity: 0; }
+  }
+
+  /* HUD */
+  #hud {
+    position: fixed; top: 12px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 20px;
+    font-size: 1.4rem; font-weight: 800; z-index: 5;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  #gameName {
+    position: fixed; top: 52px; left: 0; right: 0; text-align: center;
+    font-size: 0.95rem; opacity: 0.75; z-index: 5;
+  }
+
+  /* Catch zone */
+  #zone { position: absolute; top: 0; bottom: 0; border-left: 4px dashed rgba(255,255,255,0.7);
+    border-right: 4px dashed rgba(255,255,255,0.7); background: rgba(255,255,255,0.12); }
+
+  /* Overlays */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(10,10,25,0.88); text-align: center; padding: 20px;
+  }
+  .overlay.show { display: flex; }
+  .overlay h1 { font-size: clamp(2rem, 8vw, 3.4rem); margin-bottom: 8px; }
+  .overlay p { font-size: 1.1rem; opacity: 0.8; margin-bottom: 22px; max-width: 520px; }
+  .big-emoji { font-size: 90px; margin-bottom: 12px; }
+
+  .menu-opts { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 420px; }
+  .menu-btn {
+    padding: 20px; border-radius: 18px; border: 4px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.08); color: #fff;
+    font-size: clamp(1.2rem, 5vw, 1.6rem); font-weight: 800; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .menu-btn:active { transform: scale(0.96); }
+  .menu-btn.scan {
+    border-color: #43e97b; background: rgba(67,233,123,0.22);
+    box-shadow: 0 0 24px rgba(67,233,123,0.5); transform: scale(1.03);
+  }
+
+  /* History list */
+  #historyList { width: 100%; max-width: 480px; max-height: 55dvh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .hist-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: rgba(255,255,255,0.08); border: 3px solid rgba(255,255,255,0.18);
+    border-radius: 14px; cursor: pointer; text-align: left;
+  }
+  .hist-item.scan { border-color: #43e97b; background: rgba(67,233,123,0.22); }
+  .hist-item .icon { font-size: 34px; }
+  .hist-item .info { flex: 1; }
+  .hist-item .name { font-weight: 800; font-size: 1.05rem; }
+  .hist-item .meta { font-size: 0.8rem; opacity: 0.7; }
+  .hist-item .loves { font-size: 1rem; font-weight: 800; color: #f5576c; }
+
+  /* Hold-progress + status (standard SwitchMate chrome) */
+  #holdBar { position: fixed; bottom: 0; left: 0; right: 0; height: 6px; background: rgba(255,255,255,0.15); z-index: 20; }
+  #holdFill { height: 100%; width: 0%; background: #f5576c; transition: width 0.05s linear; }
+  #holdStatus {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.7); padding: 8px 20px; border-radius: 20px;
+    font-weight: 800; opacity: 0; transition: opacity 0.2s; z-index: 20;
+  }
+  #holdStatus.show { opacity: 1; }
+
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 8;
+    transition: opacity 0.3s; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="hud"><span id="score"></span><span id="goal"></span></div>
+<div id="gameName"></div>
+<div id="flash"></div>
+
+<!-- MENU -->
+<div class="overlay show" id="menuOverlay">
+  <div class="big-emoji" id="menuEmoji">🎲</div>
+  <h1>Game Maker</h1>
+  <p>Every game is brand new — made just for you.<br>Tap anywhere (or press your switch) to choose.</p>
+  <div class="menu-opts" id="menuOpts">
+    <button class="menu-btn" data-act="new">🎲 Surprise Me!</button>
+    <button class="menu-btn" data-act="fav">❤️ Play a Favorite</button>
+    <button class="menu-btn" data-act="history">📜 My Games</button>
+    <button class="menu-btn" data-act="home">🏠 SwitchMate Home</button>
+  </div>
+</div>
+
+<!-- GAME OVER / RATING -->
+<div class="overlay" id="endOverlay">
+  <div class="big-emoji" id="endEmoji">🎉</div>
+  <h1 id="endTitle">You did it!</h1>
+  <p id="endSub"></p>
+  <div class="menu-opts" id="endOpts">
+    <button class="menu-btn" data-act="love">❤️ Love it!</button>
+    <button class="menu-btn" data-act="again">🔁 Play Again</button>
+    <button class="menu-btn" data-act="new">🎲 New Game</button>
+    <button class="menu-btn" data-act="home">🏠 SwitchMate Home</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="overlay" id="historyOverlay">
+  <h1>📜 My Games</h1>
+  <p>Games you loved rise to the top. Pick one to play it again!</p>
+  <div id="historyList"></div>
+  <div class="menu-opts" style="max-width:480px">
+    <button class="menu-btn" data-act="back">⬅ Back</button>
+    <button class="menu-btn" data-act="home">🏠 SwitchMate Home</button>
+  </div>
+</div>
+
+<div id="holdBar"><div id="holdFill"></div></div>
+<div id="holdStatus"></div>
+
+<script>
+// ============================================================
+// SEEDED PRNG — mulberry32. Same seed = same game, forever.
+// The seed IS the game. Shareable, reproducible, rateable.
+// ============================================================
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function pick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+// ============================================================
+// GAME GENOME — everything derived deterministically from seed
+// ============================================================
+const MECHANICS = ['pop', 'catch', 'stack', 'jump'];
+const THEMES = [
+  { name: 'Space',  sprites: ['🚀','🛸','⭐','🪐','☄️','👽'], bg: ['#0b0b2a','#1a1a4e'], burst: '✨' },
+  { name: 'Ocean',  sprites: ['🐠','🐙','🐬','🦀','🐡','🦈'], bg: ['#023e8a','#0077b6'], burst: '💧' },
+  { name: 'Farm',   sprites: ['🐮','🐷','🐔','🐑','🦆','🐴'], bg: ['#2d6a4f','#40916c'], burst: '🌾' },
+  { name: 'Candy',  sprites: ['🍭','🍬','🧁','🍩','🍪','🍦'], bg: ['#9d4edd','#c77dff'], burst: '🌈' },
+  { name: 'Jungle', sprites: ['🐵','🦜','🐍','🦋','🐸','🌺'], bg: ['#1b4332','#2d6a4f'], burst: '🍃' },
+  { name: 'Winter', sprites: ['⛄','🐧','❄️','🦌','🎿','🧊'], bg: ['#1d3557','#457b9d'], burst: '❄️' },
+  { name: 'Party',  sprites: ['🎈','🎁','🎂','🎉','🪅','🎊'], bg: ['#7209b7','#b5179e'], burst: '🎊' },
+  { name: 'Bugs',   sprites: ['🐝','🐞','🦗','🐛','🕷️','🐌'], bg: ['#606c38','#283618'], burst: '🍀' },
+  { name: 'Sky',    sprites: ['🎈','🪁','🦅','☁️','🌤️','🕊️'], bg: ['#0096c7','#48cae4'], burst: '☁️' },
+  { name: 'Magic',  sprites: ['🧙','🦄','🐉','🔮','🧚','⚡'], bg: ['#3c096c','#5a189a'], burst: '✨' },
+];
+// fix accidental bad emoji in ocean
+THEMES[1].sprites = ['🐠','🐙','🐬','🦀','🐡','🦈'];
+
+const ADJECTIVES = ['Super','Mega','Happy','Silly','Turbo','Cosmic','Bouncy','Giggly','Wild','Magic','Sparkly','Zippy'];
+const MECH_NAMES = { pop: 'Pop', catch: 'Catch', stack: 'Stacker', jump: 'Jumper' };
+
+function makeGenome(seed) {
+  const rng = mulberry32(seed);
+  const theme = pick(rng, THEMES);
+  const mechanic = pick(rng, MECHANICS);
+  const g = {
+    seed, mechanic, theme,
+    // difficulty knobs — gentle ranges, always winnable
+    speed: 0.6 + rng() * 0.9,          // global speed multiplier
+    goal: 5 + Math.floor(rng() * 6),   // score needed to win
+    size: 44 + Math.floor(rng() * 36), // sprite px
+    density: 3 + Math.floor(rng() * 4),// concurrent sprites (pop)
+    zoneWidth: 0.18 + rng() * 0.14,    // catch zone fraction
+    pitch: 300 + Math.floor(rng() * 500), // audio base pitch
+    name: `${pick(rng, ADJECTIVES)} ${theme.name} ${MECH_NAMES[mechanic]}`,
+  };
+  return g;
+}
+
+// ============================================================
+// AUDIO — tiny WebAudio synth, per-genome pitch
+// ============================================================
+let AC = null;
+function beep(freq, dur = 0.12, type = 'sine', vol = 0.25) {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), gn = AC.createGain();
+    o.type = type; o.frequency.value = freq;
+    gn.gain.setValueAtTime(vol, AC.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+    o.connect(gn); gn.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + dur);
+  } catch (e) {}
+}
+function sfxGood(g) { beep(g.pitch, 0.1); setTimeout(() => beep(g.pitch * 1.5, 0.15), 90); }
+function sfxWin(g) { [1, 1.25, 1.5, 2].forEach((m, i) => setTimeout(() => beep(g.pitch * m, 0.2), i * 130)); }
+function sfxMiss(g) { beep(g.pitch * 0.5, 0.2, 'square', 0.12); }
+
+// ============================================================
+// HISTORY + RATINGS (localStorage, Firestore events best-effort)
+// ============================================================
+const HIST_KEY = 'sm_maker_history_v1';
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch (e) { return []; }
+}
+function saveHistory(h) {
+  try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 100))); } catch (e) {}
+}
+function recordPlay(g) {
+  const h = loadHistory();
+  let item = h.find(x => x.seed === g.seed);
+  if (!item) {
+    item = { seed: g.seed, name: g.name, mechanic: g.mechanic, theme: g.theme.name, plays: 0, loves: 0, first: Date.now() };
+    h.unshift(item);
+  }
+  item.plays++; item.last = Date.now();
+  saveHistory(h);
+  logEvent('play', g);
+}
+function recordLove(g) {
+  const h = loadHistory();
+  const item = h.find(x => x.seed === g.seed);
+  if (item) { item.loves++; saveHistory(h); }
+  logEvent('love', g);
+}
+// Global event feed → Firestore (same pipeline as switchmate-tracker)
+function logEvent(type, g) {
+  try {
+    if (typeof DB === 'undefined') return;
+    DB.collection('game_maker_events').add({
+      type, seed: g.seed, name: g.name, mechanic: g.mechanic, theme: g.theme.name,
+      uid: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : null,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {}
+}
+function topFavorite() {
+  const h = loadHistory().filter(x => x.loves > 0);
+  h.sort((a, b) => b.loves - a.loves || b.plays - a.plays);
+  return h[0] || null;
+}
+
+// ============================================================
+// GAME ENGINE
+// ============================================================
+const stage = document.getElementById('stage');
+let G = null;            // current genome
+let mode = 'menu';       // menu | playing | end | history
+let score = 0;
+let raf = null, spawnTimer = null;
+let sprites = [];        // live sprite objects
+let scanIdx = -1, scanTimer = null;
+
+function setTheme(g) {
+  document.body.style.setProperty('--bg1', g.theme.bg[0]);
+  document.body.style.setProperty('--bg2', g.theme.bg[1]);
+}
+function hud() {
+  document.getElementById('score').textContent = '⭐ ' + score;
+  document.getElementById('goal').textContent = '🎯 ' + G.goal;
+  document.getElementById('gameName').textContent = G.name + '  ·  #' + G.seed;
+}
+function clearStage() {
+  cancelAnimationFrame(raf); raf = null;
+  clearTimeout(spawnTimer); spawnTimer = null;
+  stage.innerHTML = ''; sprites = [];
+}
+function burst(x, y, emoji) {
+  for (let i = 0; i < 6; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle'; p.textContent = emoji;
+    p.style.left = x + 'px'; p.style.top = y + 'px';
+    p.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px');
+    p.style.setProperty('--dy', (Math.random() * 160 - 80) + 'px');
+    stage.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+function flash() {
+  const f = document.getElementById('flash');
+  f.style.opacity = 0.35; setTimeout(() => f.style.opacity = 0, 120);
+}
+
+function startGame(genome) {
+  G = genome; setTheme(G); score = 0;
+  hideOverlays(); clearStage(); stopMenuScan();
+  mode = 'playing'; hud();
+  recordPlay(G);
+  ENGINES[G.mechanic].start();
+}
+
+function addScore(x, y) {
+  score++; hud(); sfxGood(G); burst(x, y, G.theme.burst);
+  if (score >= G.goal) return win();
+}
+function win() {
+  mode = 'end'; clearStage(); sfxWin(G); flash();
+  document.getElementById('endEmoji').textContent = pick(mulberry32(G.seed + score), ['🎉','🏆','🌟','🥳','💫']);
+  document.getElementById('endTitle').textContent = 'You did it!';
+  document.getElementById('endSub').textContent = G.name + ' — ' + G.goal + ' points!';
+  document.getElementById('endOverlay').classList.add('show');
+  startScan('endOpts');
+}
+
+// --- Mechanic: POP — sprites drift up, action pops one ---
+// --- Mechanic: CATCH — sprite crosses screen, action when in zone ---
+// --- Mechanic: STACK — sprite slides, action locks it above the pile ---
+// --- Mechanic: JUMP — obstacles approach, action hops over them ---
+const ENGINES = {
+  pop: {
+    start() {
+      const spawn = () => {
+        if (mode !== 'playing') return;
+        while (sprites.length < G.density) {
+          const el = document.createElement('div');
+          el.className = 'sprite';
+          el.textContent = pick(Math.random, G.theme.sprites);
+          el.style.fontSize = G.size + 'px';
+          const s = { el, x: Math.random() * (innerWidth - G.size), y: innerHeight + 40, vy: (0.8 + Math.random()) * G.speed };
+          el.style.left = s.x + 'px';
+          stage.appendChild(el); sprites.push(s);
+        }
+        spawnTimer = setTimeout(spawn, 400);
+      };
+      spawn();
+      const tick = () => {
+        if (mode !== 'playing') return;
+        for (const s of sprites) {
+          s.y -= s.vy * 2;
+          s.el.style.transform = `translateY(${s.y - innerHeight}px)`;
+          s.el.style.top = innerHeight + 'px';
+          if (s.y < -60) { s.y = innerHeight + 40; s.x = Math.random() * (innerWidth - G.size); s.el.style.left = s.x + 'px'; }
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    },
+    action() {
+      if (!sprites.length) return;
+      // pop the sprite closest to screen center (most "aimed at")
+      const cy = innerHeight / 2;
+      sprites.sort((a, b) => Math.abs(a.y - cy) - Math.abs(b.y - cy));
+      const s = sprites.shift();
+      addScore(s.x + G.size / 2, s.y);
+      s.el.remove();
+    }
+  },
+
+  catch: {
+    zone: null, mover: null, dir: 1,
+    start() {
+      const zw = innerWidth * G.zoneWidth;
+      const zone = document.createElement('div');
+      zone.id = 'zone';
+      zone.style.left = (innerWidth / 2 - zw / 2) + 'px';
+      zone.style.width = zw + 'px';
+      stage.appendChild(zone);
+      const el = document.createElement('div');
+      el.className = 'sprite';
+      el.textContent = pick(Math.random, G.theme.sprites);
+      el.style.fontSize = G.size + 'px';
+      el.style.top = (innerHeight / 2 - G.size / 2) + 'px';
+      stage.appendChild(el);
+      this.mover = { el, x: 0 }; this.dir = 1;
+      const speed = 3.2 * G.speed;
+      const tick = () => {
+        if (mode !== 'playing') return;
+        const m = this.mover;
+        m.x += speed * this.dir;
+        if (m.x > innerWidth - G.size) this.dir = -1;
+        if (m.x < 0) this.dir = 1;
+        m.el.style.left = m.x + 'px';
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    },
+    action() {
+      const m = this.mover; if (!m) return;
+      const zw = innerWidth * G.zoneWidth;
+      const zl = innerWidth / 2 - zw / 2, zr = innerWidth / 2 + zw / 2;
+      const cx = m.x + G.size / 2;
+      if (cx >= zl && cx <= zr) {
+        addScore(cx, innerHeight / 2);
+        m.el.textContent = pick(Math.random, G.theme.sprites);
+      } else { sfxMiss(G); }
+    }
+  },
+
+  stack: {
+    mover: null, dir: 1, stackTop: 0,
+    start() {
+      this.stackTop = innerHeight - 20;
+      this.newMover();
+      const tick = () => {
+        if (mode !== 'playing') return;
+        const m = this.mover;
+        if (m) {
+          m.x += 3.4 * G.speed * this.dir;
+          if (m.x > innerWidth - G.size) this.dir = -1;
+          if (m.x < 0) this.dir = 1;
+          m.el.style.left = m.x + 'px';
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    },
+    newMover() {
+      const el = document.createElement('div');
+      el.className = 'sprite';
+      el.textContent = pick(Math.random, G.theme.sprites);
+      el.style.fontSize = G.size + 'px';
+      el.style.top = '80px';
+      stage.appendChild(el);
+      this.mover = { el, x: 0 }; this.dir = 1;
+    },
+    action() {
+      const m = this.mover; if (!m) return;
+      // drop: lock sprite onto the stack
+      m.el.style.transition = 'top 0.35s cubic-bezier(0.5,0,1,1)';
+      this.stackTop -= G.size * 0.9;
+      m.el.style.top = this.stackTop + 'px';
+      addScore(m.x + G.size / 2, this.stackTop);
+      this.mover = null;
+      if (mode === 'playing') setTimeout(() => { if (mode === 'playing') this.newMover(); }, 420);
+    }
+  },
+
+  jump: {
+    hero: null, heroY: 0, vy: 0, jumping: false, obstacles: [],
+    start() {
+      const ground = innerHeight - 110;
+      const el = document.createElement('div');
+      el.className = 'sprite';
+      el.textContent = pick(Math.random, G.theme.sprites);
+      el.style.fontSize = G.size + 'px';
+      el.style.left = '60px';
+      stage.appendChild(el);
+      this.hero = el; this.heroY = ground; this.vy = 0; this.jumping = false; this.obstacles = [];
+      el.style.top = ground + 'px';
+      const spawnObs = () => {
+        if (mode !== 'playing') return;
+        const o = document.createElement('div');
+        o.className = 'sprite';
+        o.textContent = pick(Math.random, G.theme.sprites);
+        o.style.fontSize = (G.size * 0.8) + 'px';
+        o.style.top = (ground + G.size * 0.2) + 'px';
+        stage.appendChild(o);
+        this.obstacles.push({ el: o, x: innerWidth + 40, scored: false });
+        spawnTimer = setTimeout(spawnObs, (1600 + Math.random() * 900) / G.speed);
+      };
+      spawnObs();
+      const tick = () => {
+        if (mode !== 'playing') return;
+        // hero physics
+        if (this.jumping) {
+          this.vy += 0.9; this.heroY += this.vy;
+          if (this.heroY >= ground) { this.heroY = ground; this.jumping = false; this.vy = 0; }
+          this.hero.style.top = this.heroY + 'px';
+        }
+        // obstacles
+        for (const ob of this.obstacles) {
+          ob.x -= 4.2 * G.speed;
+          ob.el.style.left = ob.x + 'px';
+          // causal scoring: count it when it passes the hero WHILE airborne
+          const atHero = ob.x < 60 + G.size && ob.x > 60 - G.size;
+          if (!ob.scored && atHero && this.jumping) {
+            ob.scored = true;
+            addScore(80, this.heroY);
+          }
+          // passed without a jump: soft miss, no penalty, no score
+          if (!ob.scored && !ob.missed && ob.x < 60 - G.size) {
+            ob.missed = true; sfxMiss(G);
+          }
+          if (ob.x < -80) { ob.el.remove(); }
+        }
+        this.obstacles = this.obstacles.filter(o => o.x >= -80);
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    },
+    action() {
+      if (!this.jumping) { this.jumping = true; this.vy = -16; beep(G.pitch * 1.2, 0.08); }
+    }
+  }
+};
+
+// ============================================================
+// MENUS + SCANNING (switch-accessible option selection)
+// ============================================================
+function hideOverlays() {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('show'));
+}
+function optButtons(containerId) {
+  return [...document.getElementById(containerId).querySelectorAll('.menu-btn, .hist-item')];
+}
+let scanContainer = null;
+function startScan(containerId) {
+  stopMenuScan();
+  scanContainer = containerId;
+  scanIdx = -1;
+  scanStep();
+}
+function scanStep() {
+  const btns = optButtons(scanContainer);
+  if (!btns.length) return;
+  scanIdx = (scanIdx + 1) % btns.length;
+  btns.forEach((b, i) => b.classList.toggle('scan', i === scanIdx));
+  beep(500, 0.04, 'sine', 0.06);
+  scanTimer = setTimeout(scanStep, 1300);
+}
+function stopMenuScan() {
+  clearTimeout(scanTimer); scanTimer = null;
+  document.querySelectorAll('.scan').forEach(b => b.classList.remove('scan'));
+  scanIdx = -1; scanContainer = null;
+}
+function selectScanned() {
+  if (scanContainer === null || scanIdx < 0) return false;
+  const btns = optButtons(scanContainer);
+  if (btns[scanIdx]) { btns[scanIdx].click(); return true; }
+  return false;
+}
+
+function showMenu() {
+  mode = 'menu'; clearStage(); hideOverlays();
+  document.getElementById('menuOverlay').classList.add('show');
+  document.getElementById('menuEmoji').textContent = pick(Math.random, ['🎲','🎮','🌟','🎨']);
+  startScan('menuOpts');
+}
+function showHistory() {
+  mode = 'history'; hideOverlays();
+  const list = document.getElementById('historyList');
+  const h = loadHistory().slice().sort((a, b) => b.loves - a.loves || b.plays - a.plays);
+  list.innerHTML = h.length ? h.slice(0, 20).map(x => {
+    const th = THEMES.find(t => t.name === x.theme) || THEMES[0];
+    return `<div class="hist-item" onclick="playSeed(${x.seed})">
+      <span class="icon">${th.sprites[0]}</span>
+      <span class="info"><span class="name">${x.name}</span><br>
+      <span class="meta">played ${x.plays}× · #${x.seed}</span></span>
+      <span class="loves">${x.loves > 0 ? '❤️' + x.loves : ''}</span></div>`;
+  }).join('') : '<p style="opacity:0.7">No games yet — go play one!</p>';
+  document.getElementById('historyOverlay').classList.add('show');
+  startScan('historyOverlay');
+}
+function playSeed(seed) { startGame(makeGenome(seed)); }
+function newRandomGame() { playSeed(Math.floor(Math.random() * 1000000)); }
+
+// Menu button wiring
+document.getElementById('menuOpts').addEventListener('click', e => {
+  const act = e.target.closest('.menu-btn')?.dataset.act;
+  if (act === 'new') newRandomGame();
+  else if (act === 'fav') { const f = topFavorite(); f ? playSeed(f.seed) : newRandomGame(); }
+  else if (act === 'history') showHistory();
+  else if (act === 'home') window.location.href = '../index.html';
+});
+document.getElementById('endOpts').addEventListener('click', e => {
+  const act = e.target.closest('.menu-btn')?.dataset.act;
+  if (act === 'love') {
+    recordLove(G); sfxWin(G);
+    const btn = e.target.closest('.menu-btn');
+    btn.textContent = '❤️ Loved!'; btn.style.borderColor = '#f5576c';
+    setTimeout(newRandomGame, 900);
+  }
+  else if (act === 'again') playSeed(G.seed);
+  else if (act === 'new') newRandomGame();
+  else if (act === 'home') window.location.href = '../index.html';
+});
+document.getElementById('historyOverlay').addEventListener('click', e => {
+  const act = e.target.closest('.menu-btn')?.dataset.act;
+  if (act === 'back') showMenu();
+  else if (act === 'home') window.location.href = '../index.html';
+});
+
+// ============================================================
+// SWITCH INPUT — tap = action/select, hold 2s = menu, hold 10s = hub
+// ============================================================
+function primaryAction() {
+  if (mode === 'playing') { ENGINES[G.mechanic].action(); return; }
+  if (mode === 'menu' || mode === 'end' || mode === 'history') { selectScanned(); return; }
+}
+
+let touchStart = 0, holdInt = null, holdFired = false;
+document.documentElement.addEventListener('touchstart', function (e) {
+  if (touchStart) return;
+  if (e.target.closest('.menu-btn') || e.target.closest('.hist-item')) return; // direct taps work
+  e.preventDefault();
+  touchStart = Date.now(); holdFired = false;
+  document.getElementById('holdFill').style.width = '0%';
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    document.getElementById('holdFill').style.width = Math.min(100, (elapsed / 10) * 100) + '%';
+    if (elapsed >= 10 && !holdFired) {
+      holdFired = true; clearInterval(holdInt); holdInt = null;
+      document.getElementById('holdStatus').textContent = '×';
+      document.getElementById('holdStatus').classList.add('show');
+      setTimeout(() => { window.location.href = '../index.html'; }, 300);
+    } else if (elapsed >= 2 && !holdFired) {
+      document.getElementById('holdStatus').textContent = 'Hold...';
+      document.getElementById('holdStatus').classList.add('show');
+    }
+  }, 50);
+}, { passive: false });
+
+document.documentElement.addEventListener('touchend', function (e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  document.getElementById('holdFill').style.width = '0%';
+  document.getElementById('holdStatus').classList.remove('show');
+  if (holdFired) { holdFired = false; return; }
+  if (elapsed >= 2) { showMenu(); }
+  else { primaryAction(); }
+}, { passive: true });
+
+document.documentElement.addEventListener('touchcancel', function () {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0;
+  document.getElementById('holdFill').style.width = '0%';
+  document.getElementById('holdStatus').classList.remove('show');
+}, { passive: true });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { window.location.href = '../index.html'; return; }
+  if (e.repeat) { e.preventDefault(); return; }  // held switch must not machine-gun
+  e.preventDefault();
+  primaryAction();
+});
+
+// boot
+showMenu();
+</script>
+<script src="../firebase-init.js"></script>
+<script src="../switchmate-tracker.js"></script>
+</body>
+</html>
