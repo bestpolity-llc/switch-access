@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HELLGATE — One-Switch Corridor Shooter</title>
+<style>
+  :root{
+    --bg:#0b0a0f;
+    --wall:#3a1512;
+    --wall-dark:#1e0a09;
+    --ember:#ff5a1f;
+    --gold:#ffe14d;
+    --bone:#f2ead8;
+    --blood:#c9243a;
+    --steel:#8b93a7;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:var(--bg);overflow:hidden;
+    font-family:"Courier New",ui-monospace,Menlo,Consolas,monospace;
+    -webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #stage{position:relative;width:100%;height:100%}
+  canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+
+  /* ---------- overlay menus ---------- */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:18px;padding:24px;
+    background:radial-gradient(ellipse at 50% 30%, rgba(58,21,18,.55), rgba(11,10,15,.94) 70%);
+    text-align:center;z-index:10}
+  .overlay.hidden{display:none}
+  .title{color:var(--ember);font-size:clamp(34px,8vw,72px);font-weight:900;
+    letter-spacing:.08em;text-shadow:0 0 24px rgba(255,90,31,.55),4px 4px 0 #000;
+    line-height:1}
+  .subtitle{color:var(--bone);font-size:clamp(15px,2.6vw,20px);max-width:34em;line-height:1.5}
+  .subtitle b{color:var(--gold)}
+  .scoreline{color:var(--gold);font-size:clamp(20px,4vw,30px);font-weight:900;letter-spacing:.05em}
+
+  .menu{display:flex;flex-direction:column;gap:12px;width:min(460px,92vw);margin-top:6px}
+  .mi{position:relative;display:block;width:100%;padding:16px 18px;
+    font:inherit;font-size:clamp(17px,3vw,22px);font-weight:900;letter-spacing:.06em;
+    color:var(--bone);background:rgba(30,10,9,.85);border:3px solid #4d2320;
+    cursor:pointer;text-transform:uppercase;transition:none}
+  .mi .val{color:var(--steel);font-weight:900}
+  .mi.scan{color:#111;background:var(--gold);border-color:#fff;
+    box-shadow:0 0 0 4px rgba(255,225,77,.35),0 0 28px rgba(255,225,77,.5)}
+  .mi.scan .val{color:#5c4a00}
+  .mi:focus-visible{outline:4px solid var(--gold);outline-offset:2px}
+  .hint{color:var(--steel);font-size:clamp(12px,2vw,14px);max-width:36em;line-height:1.6}
+
+  #flash{position:absolute;inset:0;background:var(--blood);opacity:0;pointer-events:none;z-index:5}
+
+  /* ---------- SwitchMate hold chrome ---------- */
+  .hold-bar{position:fixed;bottom:0;left:0;right:0;height:6px;background:transparent;
+    z-index:60;pointer-events:none}
+  .hold-fill{height:100%;width:0%;background:linear-gradient(90deg,#4CAF50,#FFD700,#FF5722);
+    transition:width .1s linear;border-radius:0 3px 3px 0}
+  .hold-status{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+    font-size:1rem;color:var(--gold);z-index:60;pointer-events:none;
+    opacity:0;transition:opacity .2s;text-align:center;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+  .hold-status.show{opacity:1}
+
+  @media (prefers-reduced-motion: reduce){
+    .mi.scan{box-shadow:0 0 0 4px rgba(255,225,77,.35)}
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+  <div id="flash"></div>
+
+  <!-- MAIN MENU -->
+  <div class="overlay" id="menuMain">
+    <div class="title">HELLGATE</div>
+    <div class="subtitle">A one-switch corridor shooter. The crosshair sweeps on its own —
+      <b>press your switch to fire</b> when it lines up with a demon.
+      A tone sounds whenever the crosshair is locked on. Clear the room and you march deeper.</div>
+    <div class="menu" id="menuMainItems"></div>
+    <div class="hint">Works with any single switch that sends <b>Space</b>, <b>Enter</b>, a
+      <b>mouse click</b>, or a <b>screen tap</b>. Menus scan automatically — press when your
+      choice lights up. Any key on the keyboard also works as the switch.
+      Quick tap = select · hold 2s = back · hold 10s = home.</div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="menuOver">
+    <div class="title" style="color:var(--blood)">YOU DIED</div>
+    <div class="scoreline" id="overScore"></div>
+    <div class="menu" id="menuOverItems"></div>
+  </div>
+</div>
+
+<div class="hold-bar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   HELLGATE — single-switch stop-action corridor shooter
+   SwitchMate conventions: quick tap = select/action,
+   hold 2s = back/cancel, hold 10s = exit to hub.
+   ========================================================= */
+
+/* ---------- settings (persisted in switchaac_* localStorage) ---------- */
+const LEVELS = ["SLOW","MEDIUM","FAST"];
+const settings = {
+  sweep: parseInt(localStorage.getItem("switchaac_hg_sweep")||"0",10)||0,
+  scan:  parseInt(localStorage.getItem("switchaac_hg_scan")||"0",10)||0,
+  fury:  parseInt(localStorage.getItem("switchaac_hg_fury")||"0",10)||0,
+  sound: localStorage.getItem("switchaac_hg_sound")!=="0"
+};
+function saveSettings(){
+  localStorage.setItem("switchaac_hg_sweep", settings.sweep);
+  localStorage.setItem("switchaac_hg_scan", settings.scan);
+  localStorage.setItem("switchaac_hg_fury", settings.fury);
+  localStorage.setItem("switchaac_hg_sound", settings.sound?"1":"0");
+}
+const SWEEP_SPEED = [0.45, 0.75, 1.15];      // radians/sec of the sweep phase
+const SCAN_MS     = [1700, 1200, 800];       // menu highlight dwell
+const ATTACK_SEC  = [9, 6.5, 4.5];           // seconds for a demon to charge an attack
+
+/* ---------- audio (Web Audio, no assets) ---------- */
+let AC = null;
+function audio(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==="suspended") AC.resume(); return AC; }
+function tone(freq, dur, type="square", gain=0.08, when=0, slideTo=null){
+  if(!settings.sound) return; const ac=audio(); if(!ac) return;
+  const t = ac.currentTime + when;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t+dur);
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+dur+0.02);
+}
+const sfx = {
+  scanTick(){ tone(520, .06, "square", .05); },
+  select(){ tone(660, .09, "square", .09); tone(990, .12, "square", .07, .07); },
+  lockOn(){ tone(1180, .09, "sine", .10); },      // crosshair over a demon
+  fireHit(){ tone(200, .18, "sawtooth", .12, 0, 60); tone(90, .25, "square", .10, .04); },
+  fireMiss(){ tone(140, .12, "square", .06, 0, 70); },
+  hurt(){ tone(300, .35, "sawtooth", .14, 0, 55); },
+  demonCharge(){ tone(220, .25, "sine", .06, 0, 440); },
+  waveClear(){ [392,494,587,784].forEach((f,i)=>tone(f,.14,"square",.09,i*.11)); },
+  gameOver(){ [330,262,196,131].forEach((f,i)=>tone(f,.3,"sawtooth",.11,i*.22)); }
+};
+
+/* ---------- one switch to rule them all ---------- */
+let switchHandler = null;   // current consumer of quick-tap switch presses
+let backHandler = null;     // consumer of hold-2s "back" presses
+function onSwitch(fn){ switchHandler = fn; }
+function onBack(fn){ backHandler = fn; }
+let lastPress = 0;
+function pressSwitch(directTarget){
+  const now = performance.now();
+  if(now - lastPress < 140) return;          // debounce key auto-repeat / double events
+  lastPress = now;
+  if(switchHandler) switchHandler(directTarget||null);
+}
+function exitHome(){ window.location.href = "../index.html"; }
+function doBack(){ if(backHandler) backHandler(); }
+
+/* ---------- SwitchMate hold semantics: 2s = back, 10s = hub ---------- */
+let touchStart = 0, holdInt = null, holdFired10 = false;
+const holdFillEl = ()=>document.getElementById("holdFill");
+const holdStatusEl = ()=>document.getElementById("holdStatus");
+document.documentElement.addEventListener("touchstart", function(e){
+  if(touchStart) return;
+  if(e.target.closest && e.target.closest(".mi")) return;  // real buttons stay tappable
+  e.preventDefault();
+  touchStart = Date.now(); holdFired10 = false;
+  holdFillEl().style.width = "0%";
+  holdInt = setInterval(()=>{
+    const elapsed = (Date.now()-touchStart)/1000;
+    holdFillEl().style.width = Math.min(100,(elapsed/10)*100)+"%";
+    if(elapsed >= 10 && !holdFired10){
+      holdFired10 = true; clearInterval(holdInt); holdInt = null;
+      holdFillEl().style.width = "100%";
+      setTimeout(exitHome, 300);
+    } else if(elapsed >= 2){
+      holdStatusEl().textContent = "Hold… (10s = home)";
+      holdStatusEl().classList.add("show");
+    }
+  }, 50);
+}, {passive:false});
+document.documentElement.addEventListener("touchend", function(e){
+  if(!touchStart) return;
+  const elapsed = (Date.now()-touchStart)/1000;
+  touchStart = 0;
+  if(holdInt){ clearInterval(holdInt); holdInt = null; }
+  holdFillEl().style.width = "0%";
+  holdStatusEl().classList.remove("show");
+  if(holdFired10){ holdFired10 = false; return; }
+  if(elapsed >= 2) doBack();
+  else pressSwitch(null);
+}, {passive:true});
+document.documentElement.addEventListener("touchcancel", function(){
+  if(holdInt){ clearInterval(holdInt); holdInt = null; }
+  touchStart = 0; holdFired10 = false;
+  holdFillEl().style.width = "0%";
+  holdStatusEl().classList.remove("show");
+}, {passive:true});
+
+/* ---------- keyboard / pointer input ---------- */
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape"){ doBack(); return; }
+  if(e.repeat) return;
+  if(["Tab","F5","F11","F12"].includes(e.key)) return;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  e.preventDefault();
+  pressSwitch(null);
+});
+document.addEventListener("pointerdown", e=>{
+  if(e.pointerType === "touch") return;   // handled by touchstart/end
+  const btn = e.target.closest && e.target.closest(".mi");
+  pressSwitch(btn || null);
+});
+
+/* ---------- scanning menu ---------- */
+function makeMenu(containerId, itemDefs){
+  const box = document.getElementById(containerId);
+  box.innerHTML = "";
+  const items = itemDefs.map(def=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "mi"; b.tabIndex = -1;
+    box.appendChild(b);
+    return { el:b, def };
+  });
+  let idx = 0, timer = null;
+  function label(it){
+    it.el.innerHTML = it.def.value
+      ? `${it.def.text}: <span class="val">${it.def.value()}</span>`
+      : it.def.text;
+  }
+  function paint(){
+    items.forEach((it,i)=>{ label(it); it.el.classList.toggle("scan", i===idx); });
+  }
+  function advance(){ idx = (idx+1) % items.length; paint(); sfx.scanTick(); }
+  return {
+    start(){
+      idx = 0; paint();
+      clearInterval(timer);
+      timer = setInterval(advance, SCAN_MS[settings.scan]);
+      onSwitch(target=>{
+        let it = items[idx];
+        if(target){ const hit = items.find(x=>x.el===target); if(hit) it = hit; }
+        sfx.select();
+        it.def.action();
+        paint();
+        // restart dwell timer & scan rate (may have changed)
+        clearInterval(timer);
+        timer = setInterval(advance, SCAN_MS[settings.scan]);
+      });
+    },
+    stop(){ clearInterval(timer); }
+  };
+}
+
+/* ---------- game state ---------- */
+const cv = document.getElementById("game");
+const cx = cv.getContext("2d");
+let W=0,H=0,CXm=0;
+function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; CXm = W/2; }
+addEventListener("resize", resize); resize();
+
+const G = {
+  mode:"menu",            // menu | play | walk | over
+  wave:0, kills:0, hp:5, maxHp:5,
+  phase:0,                // sweep phase
+  crossX:0,
+  demons:[],
+  walkT:0,
+  lockedLast:false,
+  shots:[],               // muzzle flash / tracer effects
+  torch:0
+};
+
+function demonSlots(n){
+  // spread n demons across the corridor, at varying depth
+  const xs = n===1 ? [0] : n===2 ? [-0.55,0.55] : [-0.7,0,0.7];
+  return xs.map((x,i)=>({ lane:x, depth:0.55 + (i%2)*0.25 + Math.random()*0.15 }));
+}
+function spawnWave(){
+  G.wave++;
+  const n = Math.min(1 + Math.floor((G.wave-1)/2), 3);
+  G.demons = demonSlots(n).map(s=>({
+    lane:s.lane, depth:s.depth,
+    hp:1, alive:true,
+    charge:Math.random()*0.3,               // 0..1 attack meter
+    chargeRate: 1/ATTACK_SEC[settings.fury] * (0.9+Math.random()*0.3),
+    bob:Math.random()*Math.PI*2,
+    dying:0
+  }));
+}
+
+function screenXofLane(lane, depth){
+  // perspective: lanes converge toward center with depth
+  const spread = (1-depth) * (W*0.42) + W*0.06;
+  return CXm + lane*spread;
+}
+function demonScale(depth){ return (1-depth)*1.5 + 0.35; }
+
+/* ---------- switch during play = FIRE ---------- */
+function playSwitch(){
+  const hitR = 70 * (W/900) + 30;     // generous hitbox
+  let hit = null;
+  for(const d of G.demons){
+    if(!d.alive) continue;
+    const dx = Math.abs(screenXofLane(d.lane,d.depth) - G.crossX);
+    if(dx < hitR * (demonScale(d.depth)+0.4) && (!hit || dx<hit.dx)) hit = {d, dx};
+  }
+  G.shots.push({x:G.crossX, t:0});
+  if(hit){
+    hit.d.alive = false; hit.d.dying = 0.001;
+    G.kills++;
+    sfx.fireHit();
+    if(G.demons.every(d=>!d.alive)){
+      setTimeout(()=>{ if(G.mode==="play"){ G.mode="walk"; G.walkT=0; sfx.waveClear(); } }, 350);
+    }
+  } else sfx.fireMiss();
+}
+
+function damagePlayer(){
+  G.hp--; sfx.hurt();
+  const f = document.getElementById("flash");
+  f.style.transition="none"; f.style.opacity=.55;
+  requestAnimationFrame(()=>{ f.style.transition="opacity .5s"; f.style.opacity=0; });
+  if(G.hp<=0){
+    G.mode="over"; sfx.gameOver();
+    document.getElementById("overScore").textContent =
+      `WAVE ${G.wave} — ${G.kills} DEMON${G.kills===1?"":"S"} SLAIN`;
+    show(menuOverEl); overMenu.start();
+    onBack(()=>{ overMenu.stop(); show(menuMainEl); mainMenu.start(); });
+  }
+}
+
+/* ---------- update ---------- */
+let prev = performance.now();
+function update(dt){
+  G.torch += dt;
+  if(G.mode==="play"){
+    G.phase += dt * SWEEP_SPEED[settings.sweep] * Math.PI;
+    const m = W*0.08;
+    G.crossX = CXm + Math.sin(G.phase) * (W/2 - m);
+
+    // lock-on tone edge detection
+    const hitR = 70*(W/900)+30;
+    const locked = G.demons.some(d=>d.alive &&
+      Math.abs(screenXofLane(d.lane,d.depth)-G.crossX) < hitR*(demonScale(d.depth)+0.4));
+    if(locked && !G.lockedLast) sfx.lockOn();
+    G.lockedLast = locked;
+
+    for(const d of G.demons){
+      if(!d.alive){ if(d.dying>0 && d.dying<1) d.dying=Math.min(1,d.dying+dt*2.2); continue; }
+      d.bob += dt*2.5;
+      const before = d.charge;
+      d.charge += dt * d.chargeRate;
+      if(before < 0.72 && d.charge >= 0.72) sfx.demonCharge();
+      if(d.charge >= 1){ d.charge = 0; damagePlayer(); if(G.mode!=="play") return; }
+    }
+  }
+  else if(G.mode==="walk"){
+    G.walkT += dt;
+    if(G.walkT > 1.6){ G.mode="play"; spawnWave(); }
+  }
+  G.shots.forEach(s=>s.t+=dt);
+  G.shots = G.shots.filter(s=>s.t<0.25);
+}
+
+/* ---------- drawing ---------- */
+function drawCorridor(walkOffset){
+  const flick = 0.9 + Math.sin(G.torch*9)*0.05 + Math.sin(G.torch*23)*0.05;
+  cx.fillStyle = "#050408"; cx.fillRect(0,0,W,H);
+  const horizon = H*0.46;
+  // floor
+  const fg = cx.createLinearGradient(0,horizon,0,H);
+  fg.addColorStop(0,"#12080a"); fg.addColorStop(1,"#2a1210");
+  cx.fillStyle = fg; cx.fillRect(0,horizon,W,H-horizon);
+  // ceiling
+  const cg = cx.createLinearGradient(0,0,0,horizon);
+  cg.addColorStop(0,"#170b0d"); cg.addColorStop(1,"#0a0507");
+  cx.fillStyle = cg; cx.fillRect(0,0,W,horizon);
+  // receding wall strips
+  cx.lineWidth = 3;
+  for(let i=0;i<9;i++){
+    let d = i/9 + (walkOffset%(1/9));
+    d = d % 1;
+    const t = 1-d;                      // near=1 far=0... invert for size
+    const halfW = (t*t)*(W*0.55)+W*0.02;
+    const halfH = (t*t)*(H*0.52)+H*0.02;
+    const a = Math.max(0, t*0.9) * flick;
+    cx.strokeStyle = `rgba(120,45,35,${a.toFixed(3)})`;
+    cx.strokeRect(CXm-halfW, horizon-halfH, halfW*2, halfH*1.9);
+  }
+  // converging edges
+  cx.strokeStyle = `rgba(255,90,31,${(0.25*flick).toFixed(3)})`;
+  cx.beginPath();
+  cx.moveTo(0,0); cx.lineTo(CXm,horizon); cx.lineTo(W,0);
+  cx.moveTo(0,H); cx.lineTo(CXm,horizon); cx.lineTo(W,H);
+  cx.stroke();
+  // torch glow center
+  const gl = cx.createRadialGradient(CXm,horizon,10, CXm,horizon,W*0.5);
+  gl.addColorStop(0,`rgba(255,120,40,${0.18*flick})`); gl.addColorStop(1,"rgba(0,0,0,0)");
+  cx.fillStyle = gl; cx.fillRect(0,0,W,H);
+}
+
+function drawDemon(d){
+  const x = screenXofLane(d.lane,d.depth);
+  const s = demonScale(d.depth) * (H/620) * 1.35;
+  const baseY = H*0.46 + (1-d.depth)*H*0.30 + Math.sin(d.bob)*4*s;
+  cx.save();
+  cx.translate(x, baseY);
+  cx.scale(s, s);
+  if(!d.alive){ // death: sink + fade
+    cx.globalAlpha = 1-d.dying;
+    cx.translate(0, d.dying*60);
+    cx.rotate((d.lane>=0?1:-1)*d.dying*0.5);
+  }
+  // charge telegraph ring
+  if(d.alive && d.charge>0.08){
+    cx.beginPath();
+    cx.strokeStyle = d.charge>0.72 ? "#ffe14d" : "#ff5a1f";
+    cx.lineWidth = 7;
+    cx.arc(0,-95, 118, -Math.PI/2, -Math.PI/2 + d.charge*2*Math.PI);
+    cx.stroke();
+    if(d.charge>0.72){ // imminent! pulse
+      cx.globalAlpha = 0.35+0.3*Math.sin(G.torch*20);
+      cx.beginPath(); cx.arc(0,-95,126,0,7); cx.strokeStyle="#fff"; cx.lineWidth=3; cx.stroke();
+      cx.globalAlpha = d.alive?1:1-d.dying;
+    }
+  }
+  // --- original chunky demon sprite (rect art) ---
+  const px = (x,y,w,h,c)=>{ cx.fillStyle=c; cx.fillRect(x,y,w,h); };
+  // legs
+  px(-34,-40,22,42,"#5e1712"); px(12,-40,22,42,"#5e1712");
+  px(-38,0,30,10,"#2c0a08");  px(8,0,30,10,"#2c0a08");
+  // torso
+  px(-44,-118,88,84,"#8c2318");
+  px(-44,-118,88,12,"#a5342a");           // shoulder highlight
+  px(-14,-96,28,40,"#5e1712");            // belly shadow
+  // arms + claws
+  px(-64,-112,20,56,"#8c2318"); px(44,-112,20,56,"#8c2318");
+  px(-66,-58,24,14,"#e8dcc6");  px(42,-58,24,14,"#e8dcc6");
+  // head
+  px(-30,-158,60,44,"#a5342a");
+  // horns
+  px(-42,-176,14,30,"#e8dcc6"); px(28,-176,14,30,"#e8dcc6");
+  px(-46,-188,10,16,"#e8dcc6"); px(36,-188,10,16,"#e8dcc6");
+  // eyes (glow)
+  cx.fillStyle="#ffe14d";
+  cx.fillRect(-22,-146,14,10); cx.fillRect(8,-146,14,10);
+  cx.fillStyle="rgba(255,225,77,.35)";
+  cx.fillRect(-26,-150,22,18); cx.fillRect(4,-150,22,18);
+  // maw
+  px(-18,-126,36,10,"#2c0a08");
+  cx.fillStyle="#e8dcc6";
+  for(let i=0;i<4;i++) cx.fillRect(-16+i*10,-126,5,5);
+  cx.restore();
+}
+
+function drawCrosshair(){
+  const y = H*0.55;
+  const locked = G.lockedLast;
+  const c = locked ? "#ffe14d" : "#f2ead8";
+  // sweep trail
+  const grad = cx.createLinearGradient(G.crossX-120,0,G.crossX,0);
+  grad.addColorStop(0,"rgba(255,225,77,0)");
+  grad.addColorStop(1, locked?"rgba(255,225,77,.25)":"rgba(242,234,216,.12)");
+  cx.fillStyle=grad; cx.fillRect(G.crossX-120, y-70, 120, 140);
+  cx.strokeStyle=c; cx.lineWidth = locked?6:4;
+  const r = locked?34:26;
+  cx.beginPath(); cx.arc(G.crossX,y,r,0,7); cx.stroke();
+  cx.beginPath();
+  cx.moveTo(G.crossX-r-14,y); cx.lineTo(G.crossX-r+6,y);
+  cx.moveTo(G.crossX+r-6,y);  cx.lineTo(G.crossX+r+14,y);
+  cx.moveTo(G.crossX,y-r-14); cx.lineTo(G.crossX,y-r+6);
+  cx.moveTo(G.crossX,y+r-6);  cx.lineTo(G.crossX,y+r+14);
+  cx.stroke();
+  // vertical beam so it can't be missed
+  cx.globalAlpha=.25;
+  cx.fillStyle=c; cx.fillRect(G.crossX-2, 0, 4, H);
+  cx.globalAlpha=1;
+}
+
+function drawShots(){
+  for(const s of G.shots){
+    const a = 1 - s.t/0.25;
+    cx.globalAlpha = a;
+    cx.fillStyle="#ffe14d";
+    cx.fillRect(s.x-4, 0, 8, H);
+    cx.beginPath(); cx.arc(s.x, H*0.55, 46*a+10, 0, 7);
+    cx.fillStyle="rgba(255,120,40,.6)"; cx.fill();
+    cx.globalAlpha=1;
+  }
+}
+
+function drawHUD(){
+  const u = Math.max(H/620,0.8);
+  // health skulls
+  const sz = 34*u, pad=10*u;
+  for(let i=0;i<G.maxHp;i++){
+    const x = 20 + i*(sz+pad), y = 20;
+    cx.fillStyle = i<G.hp ? "#c9243a" : "rgba(139,147,167,.25)";
+    cx.fillRect(x,y,sz,sz*0.8);
+    cx.fillRect(x+sz*0.15,y+sz*0.7,sz*0.7,sz*0.25);
+    cx.fillStyle = "#0b0a0f";
+    cx.fillRect(x+sz*0.18,y+sz*0.25,sz*0.22,sz*0.22);
+    cx.fillRect(x+sz*0.6,y+sz*0.25,sz*0.22,sz*0.22);
+  }
+  cx.fillStyle="#f2ead8";
+  cx.font=`900 ${Math.round(26*u)}px "Courier New",monospace`;
+  cx.textAlign="right";
+  cx.fillText(`WAVE ${G.wave}`, W-20, 44*u);
+  cx.fillStyle="#ffe14d";
+  cx.fillText(`KILLS ${G.kills}`, W-20, 78*u);
+  cx.textAlign="left";
+}
+
+function render(){
+  if(G.mode==="walk"){
+    drawCorridor(G.walkT*0.6);
+    cx.fillStyle="#ffe14d";
+    cx.font=`900 ${Math.round(Math.max(H/620,0.8)*34)}px "Courier New",monospace`;
+    cx.textAlign="center";
+    cx.fillText("ROOM CLEAR — MARCHING ON…", CXm, H*0.2);
+    cx.textAlign="left";
+    drawHUD();
+    return;
+  }
+  drawCorridor(0);
+  // draw far demons first
+  [...G.demons].sort((a,b)=>b.depth-a.depth).forEach(d=>{ if(d.alive||d.dying<1) drawDemon(d); });
+  drawShots();
+  if(G.mode==="play") drawCrosshair();
+  drawHUD();
+}
+
+/* ---------- main loop ---------- */
+function loop(now){
+  const dt = Math.min((now-prev)/1000, 0.05); prev = now;
+  if(G.mode==="play"||G.mode==="walk") { update(dt); render(); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- menus ---------- */
+const menuMainEl = document.getElementById("menuMain");
+const menuOverEl = document.getElementById("menuOver");
+function show(el){ [menuMainEl,menuOverEl].forEach(x=>x.classList.add("hidden")); if(el) el.classList.remove("hidden"); }
+
+function startGame(){
+  show(null);
+  G.wave=0; G.kills=0; G.hp=G.maxHp; G.shots=[]; G.lockedLast=false;
+  spawnWave();
+  G.mode="play";
+  onSwitch(playSwitch);
+  onBack(()=>{ G.mode="menu"; show(menuMainEl); mainMenu.start(); });
+}
+
+const mainMenu = makeMenu("menuMainItems", [
+  { text:"FIGHT", action:()=>{ mainMenu.stop(); startGame(); } },
+  { text:"CROSSHAIR SPEED", value:()=>LEVELS[settings.sweep],
+    action:()=>{ settings.sweep=(settings.sweep+1)%3; saveSettings(); } },
+  { text:"MENU SCAN SPEED", value:()=>LEVELS[settings.scan],
+    action:()=>{ settings.scan=(settings.scan+1)%3; saveSettings(); } },
+  { text:"DEMON FURY", value:()=>LEVELS[settings.fury],
+    action:()=>{ settings.fury=(settings.fury+1)%3; saveSettings(); } },
+  { text:"SOUND", value:()=>settings.sound?"ON":"OFF",
+    action:()=>{ settings.sound=!settings.sound; saveSettings(); } },
+  { text:"🏠 SwitchMate Home", action:exitHome }
+]);
+
+const overMenu = makeMenu("menuOverItems", [
+  { text:"FIGHT AGAIN", action:()=>{ overMenu.stop(); startGame(); } },
+  { text:"MAIN MENU",  action:()=>{ overMenu.stop(); show(menuMainEl); mainMenu.start(); } },
+  { text:"🏠 SwitchMate Home", action:exitHome }
+]);
+
+show(menuMainEl);
+mainMenu.start();
+onBack(exitHome);   // Escape / hold-2s at main menu goes home
+</script>
+<script src="../firebase-init.js"></script>
+<script src="../switchmate-tracker.js"></script>
+</body>
+</html>
