@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Switch Solitaire — one-switch Klondike</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+
+.table {
+  position: fixed; inset: 0; user-select: none; -webkit-user-select: none;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #2c7a4b 0%, #1d5c37 55%, #123f25 100%);
+  display: flex; flex-direction: column; overflow: hidden; touch-action: manipulation;
+}
+.bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px; background: rgba(0,0,0,0.28); color: #ffe9b3;
+}
+.title { font-weight: 700; font-size: clamp(15px, 2.4vw, 21px); letter-spacing: 0.5px; }
+.bar-right { display: flex; align-items: center; gap: 10px; }
+.mode-tag {
+  font-size: clamp(11px, 1.6vw, 14px); background: rgba(255,233,179,0.15);
+  padding: 3px 10px; border-radius: 99px; border: 1px solid rgba(255,233,179,0.35);
+}
+.gear {
+  font-size: clamp(16px, 2.4vw, 22px); background: none; border: none; cursor: pointer;
+  padding: 4px 6px; border-radius: 8px;
+}
+.gear:hover { background: rgba(255,255,255,0.15); }
+.gear:focus-visible { outline: 3px solid #ffd76a; }
+
+.board { flex: 1; padding: 10px clamp(8px, 2vw, 24px) 0; max-width: 1100px; width: 100%; margin: 0 auto; overflow: hidden; }
+.row { display: grid; grid-template-columns: repeat(7, 1fr); gap: clamp(5px, 1.2vw, 14px); }
+.top-row { margin-bottom: clamp(10px, 2vh, 22px); }
+.pile { position: relative; border-radius: 10px; }
+.spacer { visibility: hidden; }
+.count {
+  position: absolute; bottom: -4px; right: -2px; background: #12331f; color: #ffe9b3;
+  font-size: clamp(10px, 1.4vw, 13px); font-weight: 600;
+  padding: 1px 7px; border-radius: 99px; border: 1px solid rgba(255,233,179,0.4);
+}
+
+.card {
+  width: 100%; aspect-ratio: 5 / 7; border-radius: clamp(5px, 0.9vw, 10px);
+  background: #fdfaf2; position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+.card.red { color: #cf2b3a; }
+.card.black { color: #22262e; }
+.corner {
+  position: absolute; top: 3%; left: 6%; line-height: 1;
+  font-weight: 700; font-size: clamp(12px, 2.3vw, 22px); text-align: center;
+}
+.corner span { display: block; font-size: 0.85em; }
+.corner.flip { top: auto; left: auto; bottom: 3%; right: 6%; transform: rotate(180deg); }
+.pip {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(20px, 4.6vw, 46px); opacity: 0.9; pointer-events: none;
+}
+.card.back {
+  background: linear-gradient(135deg, #3b5bd6 0%, #2a41a8 100%);
+  border: clamp(2px, 0.4vw, 4px) solid #fdfaf2;
+}
+.back-pattern {
+  position: absolute; inset: 8%; border-radius: 6px; opacity: 0.5;
+  background: repeating-linear-gradient(45deg, #ffffff33 0 6px, transparent 6px 12px);
+}
+.slot {
+  width: 100%; aspect-ratio: 5 / 7; border-radius: clamp(5px, 0.9vw, 10px);
+  border: 2px dashed rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.5); font-size: clamp(18px, 3.5vw, 34px);
+}
+.suit-slot.red { color: rgba(255,160,170,0.55); }
+.suit-slot.black { color: rgba(255,255,255,0.4); }
+
+.column { position: relative; border-radius: 10px; }
+.tall-slot { border-color: rgba(255,255,255,0.28); }
+.stacked.first { margin-top: 0; }
+.stacked.down-off { margin-top: -124%; }
+.stacked.up-off { margin-top: -100%; }
+
+.card-glow {
+  box-shadow: 0 0 0 clamp(3px,0.5vw,5px) #ffd76a, 0 0 22px 6px rgba(255,215,106,0.85);
+  animation: throb 0.9s ease-in-out infinite; z-index: 5; position: relative;
+}
+.dest-glow { outline: clamp(3px,0.5vw,5px) dashed #ffd76a; outline-offset: 3px; border-radius: 12px; animation: throb 0.9s ease-in-out infinite; }
+.src-glow  { outline: clamp(2px,0.4vw,4px) solid rgba(255,215,106,0.75); outline-offset: 2px; border-radius: 12px; }
+@keyframes throb { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+.fx-pulse { animation: landed 0.5s ease-out; }
+@keyframes landed { 0% { transform: scale(1.12); } 100% { transform: scale(1); } }
+
+.caption {
+  padding: clamp(10px, 1.8vh, 18px) 14px calc(clamp(10px, 1.8vh, 18px) + env(safe-area-inset-bottom));
+  background: rgba(0,0,0,0.4); text-align: center; color: #fff;
+}
+.caption-inner {
+  font-size: clamp(18px, 3.2vw, 30px); font-weight: 600; line-height: 1.3;
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+}
+.caption.scan .caption-inner { color: #ffd76a; }
+.caption.praise .caption-inner { color: #8dffb0; }
+.caption.star .caption-inner { color: #ffd76a; }
+.caption.win .caption-inner { color: #ffd76a; }
+.chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: #fdfaf2; border-radius: 8px; padding: 2px 10px;
+  font-weight: 700; font-size: 0.95em; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.chip.red { color: #cf2b3a; } .chip.black { color: #22262e; }
+.dots { margin-top: 7px; display: flex; justify-content: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+.dot.on { background: #ffd76a; transform: scale(1.3); }
+
+.confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40; }
+.confetto {
+  position: absolute; top: -6vh; font-size: clamp(16px, 3vw, 30px);
+  animation-name: fall; animation-timing-function: linear; animation-fill-mode: forwards;
+}
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(115vh) rotate(540deg); opacity: 0.9; }
+}
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.overlay[hidden] { display: none; }
+.win-overlay { background: rgba(0,0,0,0.35); }
+.win-card { text-align: center; animation: pop 0.5s ease-out; }
+.win-big { font-size: clamp(70px, 16vw, 150px); }
+.win-text { font-size: clamp(40px, 9vw, 84px); font-weight: 700; color: #ffd76a; text-shadow: 0 4px 14px rgba(0,0,0,0.6); }
+.win-sub { font-size: clamp(17px, 3.4vw, 28px); color: #fff; margin-top: 10px; }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+.panel {
+  background: #fdfaf2; border-radius: 18px; padding: clamp(16px, 3vw, 28px);
+  width: min(560px, 100%); max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.5); color: #22262e;
+}
+.panel h2 { margin: 0 0 14px; font-size: 24px; font-weight: 700; }
+.setting { margin-bottom: 16px; }
+.setting > label { display: block; font-weight: 600; margin-bottom: 7px; font-size: 15px; color: #5a5f6a; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.opt {
+  flex: 1; min-width: 130px; font-family: inherit; font-size: 16px; font-weight: 600;
+  padding: 12px 14px; border-radius: 12px; border: 2px solid #cfd3da; background: #fff;
+  cursor: pointer; text-align: left; color: #22262e;
+}
+.opt small { display: block; font-weight: 400; font-size: 13px; color: #6a707c; margin-top: 3px; }
+.opt.on { border-color: #1d5c37; background: #e8f5ec; box-shadow: inset 0 0 0 1px #1d5c37; }
+.opt.primary { background: #1d5c37; border-color: #1d5c37; color: #fff; text-align: center; }
+.opt.danger { background: #fff2f0; border-color: #d9a49c; color: #a03325; text-align: center; }
+.opt:focus-visible { outline: 3px solid #ffd76a; }
+.footer-row { margin-top: 6px; }
+.hint { font-size: 13px; color: #6a707c; margin: 14px 0 0; }
+
+/* --- SwitchMate hold chrome --- */
+.hold-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 6px; background: transparent; z-index: 60; pointer-events: none; }
+.hold-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#4CAF50,#FFD700,#FF5722); transition: width .1s linear; border-radius: 0 3px 3px 0; }
+.hold-status { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 1rem; color: #ffd76a; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+.hold-status.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-glow, .dest-glow, .fx-pulse, .win-card { animation: none; }
+  .confetto { display: none; }
+}
+@media (max-width: 520px) {
+  .stacked.up-off { margin-top: -92%; }
+}
+</style>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="table" id="table">
+  <header class="bar">
+    <div class="title">🂡 Switch Solitaire</div>
+    <div class="bar-right">
+      <span class="mode-tag" id="modeTag">Easy Play</span>
+      <button class="gear" id="gearBtn" aria-label="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <main class="board">
+    <div class="row top-row">
+      <div class="pile stock" id="pStock"></div>
+      <div class="pile" id="pWaste"></div>
+      <div class="pile spacer"></div>
+      <div class="pile" id="pFound0"></div>
+      <div class="pile" id="pFound1"></div>
+      <div class="pile" id="pFound2"></div>
+      <div class="pile" id="pFound3"></div>
+    </div>
+    <div class="row tab-row" id="tabRow"></div>
+  </main>
+
+  <footer class="caption idle" id="caption">
+    <div class="caption-inner" id="captionInner"></div>
+    <div class="dots" id="dots" hidden></div>
+  </footer>
+</div>
+
+<div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+
+<div class="overlay win-overlay" id="winOverlay" hidden>
+  <div class="win-card">
+    <div class="win-big">🏆</div>
+    <div class="win-text">YOU WON!</div>
+    <div class="win-sub">Press your switch to play again</div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOverlay" hidden>
+  <div class="panel" id="settingsPanel">
+    <h2>Settings</h2>
+    <div class="setting">
+      <label>How to play</label>
+      <div class="btn-row">
+        <button class="opt" id="optEasy">Easy Play<small>One press makes a move happen. No wrong answers.</small></button>
+        <button class="opt" id="optScan">Choose Moves<small>Moves light up one at a time. Press to pick.</small></button>
+      </div>
+    </div>
+    <div class="setting" id="speedSetting">
+      <label>Scanning speed</label>
+      <div class="btn-row">
+        <button class="opt" id="optSlow">Slow</button>
+        <button class="opt" id="optMedium">Medium</button>
+        <button class="opt" id="optFast">Fast</button>
+      </div>
+    </div>
+    <div class="setting">
+      <label>Sound &amp; voice</label>
+      <div class="btn-row">
+        <button class="opt" id="optSound">Sounds</button>
+        <button class="opt" id="optVoice">Voice</button>
+      </div>
+    </div>
+    <div class="btn-row footer-row">
+      <button class="opt danger" id="optNewGame">New game</button>
+      <button class="opt primary" id="optBack">Back to the game</button>
+    </div>
+    <div class="btn-row footer-row">
+      <button class="opt primary" id="optHome">🏠 SwitchMate Home</button>
+    </div>
+    <p class="hint">Switch input: <b>Space</b>, <b>Enter</b>, or any click / tap on the table.
+      Quick tap = play · hold 2s = settings · hold 10s = home.</p>
+  </div>
+</div>
+
+<div class="hold-bar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   SWITCH SOLITAIRE — real Klondike, one switch, zero errors
+   Vanilla port of the React original. SwitchMate conventions:
+   quick tap = play/select, hold 2s = settings, hold 10s = hub.
+   ============================================================ */
+
+const SUITS = [
+  { s: "♠", name: "Spades", color: "black" },
+  { s: "♥", name: "Hearts", color: "red" },
+  { s: "♦", name: "Diamonds", color: "red" },
+  { s: "♣", name: "Clubs", color: "black" },
+];
+const RANK_LABEL = ["", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+const RANK_WORD = ["", "Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"];
+
+const PRAISE = ["Great job! 🌟", "Nice one! 👏", "You did it! 🎉", "Keep going! 💪", "Wonderful! ✨", "Way to go! 😄"];
+const PRAISE_FOUND = ["⭐ Up to its home!", "⭐ Beautiful!", "⭐ That one's done!"];
+
+function makeShuffledDeck() {
+  const deck = [];
+  for (let si = 0; si < 4; si++)
+    for (let r = 1; r <= 13; r++)
+      deck.push({ id: si * 13 + r, suit: si, rank: r, faceUp: false });
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function newGameState() {
+  const deck = makeShuffledDeck();
+  const tableau = [];
+  let p = 0;
+  for (let i = 0; i < 7; i++) {
+    const pile = deck.slice(p, p + i + 1).map((c, idx) => ({ ...c, faceUp: idx === i }));
+    p += i + 1;
+    tableau.push(pile);
+  }
+  return {
+    stock: deck.slice(p).map(c => ({ ...c, faceUp: false })),
+    waste: [],
+    foundations: [[], [], [], []],
+    tableau,
+  };
+}
+
+const topCard = pile => (pile.length ? pile[pile.length - 1] : null);
+const colorOf = c => SUITS[c.suit].color;
+
+function canFound(card, foundations) {
+  return foundations[card.suit].length === card.rank - 1;
+}
+function fitsTab(card, pile) {
+  const t = topCard(pile);
+  if (!t) return card.rank === 13;
+  return t.faceUp && colorOf(t) !== colorOf(card) && t.rank === card.rank + 1;
+}
+function firstFaceUp(pile) {
+  return pile.findIndex(c => c.faceUp);
+}
+
+/* ---------- legal moves, best first ---------- */
+function getMoves(g) {
+  const moves = [];
+  g.tableau.forEach((pile, i) => {
+    const t = topCard(pile);
+    if (t && t.faceUp && canFound(t, g.foundations))
+      moves.push({ type: "tf", from: i, card: t, score: 100 + (13 - t.rank) });
+  });
+  const w = topCard(g.waste);
+  if (w && canFound(w, g.foundations)) moves.push({ type: "wf", card: w, score: 95 });
+  g.tableau.forEach((pile, i) => {
+    const j = firstFaceUp(pile);
+    if (j < 0) return;
+    const head = pile[j];
+    g.tableau.forEach((dest, k) => {
+      if (k === i) return;
+      if (!fitsTab(head, dest)) return;
+      if (j === 0 && dest.length === 0) return;
+      const score = j > 0 ? 80 + j : 50;
+      moves.push({ type: "tt", from: i, fromIdx: j, to: k, card: head, destCard: topCard(dest), score });
+    });
+  });
+  if (w) {
+    g.tableau.forEach((dest, k) => {
+      if (fitsTab(w, dest))
+        moves.push({ type: "wt", to: k, card: w, destCard: topCard(dest), score: 60 });
+    });
+  }
+  const playMoves = moves.length > 0;
+  if (g.stock.length) moves.push({ type: "draw", score: 5 });
+  else if (g.waste.length > 1) moves.push({ type: "recycle", score: 4 });
+
+  if (!playMoves) {
+    const hidden = [...g.stock, ...g.waste.slice(0, -1)];
+    const candidates = w ? [...hidden, w] : hidden;
+    const anyHiddenPlay = candidates.some(
+      c => canFound(c, g.foundations) || g.tableau.some(p => fitsTab(c, p))
+    );
+    if (!anyHiddenPlay) return [{ type: "newgame", score: 1 }];
+  }
+  moves.sort((a, b) => b.score - a.score);
+  return moves;
+}
+
+/* ---------- apply a move ---------- */
+function applyMove(g, m) {
+  const clone = {
+    stock: [...g.stock],
+    waste: [...g.waste],
+    foundations: g.foundations.map(f => [...f]),
+    tableau: g.tableau.map(p => [...p]),
+  };
+  let fx = null;
+  switch (m.type) {
+    case "draw": {
+      const c = clone.stock.pop();
+      clone.waste.push({ ...c, faceUp: true });
+      fx = { kind: "move", pileKey: "waste" };
+      break;
+    }
+    case "recycle": {
+      clone.stock = [...clone.waste].reverse().map(c => ({ ...c, faceUp: false }));
+      clone.waste = [];
+      fx = { kind: "move", pileKey: "stock" };
+      break;
+    }
+    case "wf": {
+      const c = clone.waste.pop();
+      clone.foundations[c.suit].push(c);
+      fx = { kind: "found", pileKey: `found-${c.suit}` };
+      break;
+    }
+    case "tf": {
+      const pile = clone.tableau[m.from];
+      const c = pile.pop();
+      clone.foundations[c.suit].push(c);
+      if (pile.length && !topCard(pile).faceUp) pile[pile.length - 1] = { ...topCard(pile), faceUp: true };
+      fx = { kind: "found", pileKey: `found-${c.suit}` };
+      break;
+    }
+    case "wt": {
+      const c = clone.waste.pop();
+      clone.tableau[m.to].push(c);
+      fx = { kind: "move", pileKey: `tab-${m.to}` };
+      break;
+    }
+    case "tt": {
+      const pile = clone.tableau[m.from];
+      const run = pile.splice(m.fromIdx);
+      clone.tableau[m.to] = [...clone.tableau[m.to], ...run];
+      if (pile.length && !topCard(pile).faceUp) pile[pile.length - 1] = { ...topCard(pile), faceUp: true };
+      fx = { kind: "move", pileKey: `tab-${m.to}` };
+      break;
+    }
+    default: break;
+  }
+  const won = clone.foundations.every(f => f.length === 13);
+  return { state: clone, fx, won };
+}
+
+/* ---------- words for each move ---------- */
+function moveWords(m) {
+  const chip = c => ({ chip: c });
+  switch (m.type) {
+    case "draw":   return { parts: ["Turn over a new card"], say: "New card" };
+    case "recycle":return { parts: ["Flip the deck and go again"], say: "Flip the deck" };
+    case "wf":
+    case "tf":
+      return {
+        parts: ["Send ", chip(m.card), " up to its home ⭐"],
+        say: `${RANK_WORD[m.card.rank]} of ${SUITS[m.card.suit].name} goes home`,
+      };
+    case "wt":
+    case "tt":
+      if (!m.destCard)
+        return {
+          parts: ["Move ", chip(m.card), " to the empty space"],
+          say: `${colorOf(m.card)} ${RANK_WORD[m.card.rank]} to the empty space`,
+        };
+      return {
+        parts: ["Put ", chip(m.card), " on ", chip(m.destCard)],
+        say: `${colorOf(m.card)} ${RANK_WORD[m.card.rank]} on the ${colorOf(m.destCard)} ${RANK_WORD[m.destCard.rank]}`,
+      };
+    case "newgame": return { parts: ["Start a new game"], say: "Start a new game" };
+    default: return { parts: [""], say: "" };
+  }
+}
+
+/* ---------- which cards/piles light up for a move ---------- */
+function highlightFor(m) {
+  if (!m) return { cards: new Set(), pile: null, src: null };
+  switch (m.type) {
+    case "draw":   return { cards: new Set(), pile: "waste", src: "stock" };
+    case "recycle":return { cards: new Set(), pile: "stock", src: "waste" };
+    case "wf":     return { cards: new Set([m.card.id]), pile: `found-${m.card.suit}`, src: "waste" };
+    case "tf":     return { cards: new Set([m.card.id]), pile: `found-${m.card.suit}`, src: null };
+    case "wt":     return { cards: new Set([m.card.id]), pile: `tab-${m.to}`, src: "waste" };
+    case "tt":     return { cards: new Set([m.card.id]), pile: `tab-${m.to}`, src: null };
+    default:       return { cards: new Set(), pile: null, src: null };
+  }
+}
+
+/* ---------- sounds ---------- */
+let actx = null;
+function ensureAudio() {
+  if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+  if (actx && actx.state === "suspended") actx.resume();
+  return actx;
+}
+function blip(notes, dur = 0.12, gap = 0.09) {
+  if (!settings.sound) return;
+  const ctx = ensureAudio(); if (!ctx) return;
+  notes.forEach((f, i) => {
+    const t = ctx.currentTime + i * gap;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(ctx.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  });
+}
+const sndMove  = () => blip([523.25]);
+const sndFound = () => blip([523.25, 659.25, 783.99]);
+const sndScan  = () => blip([392], 0.06);
+const sndWin   = () => blip([523.25, 659.25, 783.99, 1046.5, 1318.5], 0.25, 0.14);
+
+function speak(text) {
+  if (!settings.voice || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.95; u.pitch = 1.05;
+  window.speechSynthesis.speak(u);
+}
+
+/* ---------- settings (persisted) ---------- */
+const SCAN_SPEEDS = { slow: 4000, medium: 2500, fast: 1500 };
+const settings = {
+  mode:  localStorage.getItem("switchaac_sol_mode") === "scan" ? "scan" : "easy",
+  speed: ["slow","medium","fast"].includes(localStorage.getItem("switchaac_sol_speed")) ? localStorage.getItem("switchaac_sol_speed") : "medium",
+  sound: localStorage.getItem("switchaac_sol_sound") !== "0",
+  voice: localStorage.getItem("switchaac_sol_voice") !== "0",
+};
+function saveSettings() {
+  localStorage.setItem("switchaac_sol_mode", settings.mode);
+  localStorage.setItem("switchaac_sol_speed", settings.speed);
+  localStorage.setItem("switchaac_sol_sound", settings.sound ? "1" : "0");
+  localStorage.setItem("switchaac_sol_voice", settings.voice ? "1" : "0");
+}
+
+/* ---------- UI state ---------- */
+let game = newGameState();
+let scanIdx = 0;
+let pending = null;          // easy-mode: move about to run
+let message = { parts: ["Press your switch to play!"], tone: "idle" };
+let fxKey = null;            // "pileKey:timestamp"
+let won = false;
+let settingsOpen = false;
+let praiseIdx = 0;
+let scanTimer = null;
+let confettiItems = [];      // {id,x,d,delay,emoji}
+
+const $ = id => document.getElementById(id);
+const moves = () => getMoves(game);
+
+/* ---------- rendering ---------- */
+function cardEl(card, hlOn) {
+  const d = document.createElement("div");
+  d.className = "card face-up " + (colorOf(card) === "red" ? "red" : "black") + (hlOn ? " card-glow" : "");
+  d.innerHTML = `<div class="corner">${RANK_LABEL[card.rank]}<span>${SUITS[card.suit].s}</span></div>
+    <div class="pip">${SUITS[card.suit].s}</div>
+    <div class="corner flip">${RANK_LABEL[card.rank]}<span>${SUITS[card.suit].s}</span></div>`;
+  return d;
+}
+function backEl() {
+  const d = document.createElement("div");
+  d.className = "card back";
+  d.innerHTML = `<div class="back-pattern"></div>`;
+  return d;
+}
+function slotEl(cls, text) {
+  const d = document.createElement("div");
+  d.className = "slot " + (cls || "");
+  if (text) d.textContent = text;
+  return d;
+}
+function chipEl(card) {
+  const s = document.createElement("span");
+  s.className = "chip " + (colorOf(card) === "red" ? "red" : "black");
+  s.textContent = RANK_LABEL[card.rank] + SUITS[card.suit].s;
+  return s;
+}
+
+function pileCls(key, hl) {
+  let c = "";
+  if (hl.pile === key) c += " dest-glow";
+  if (hl.src === key) c += " src-glow";
+  if (fxKey && fxKey.startsWith(key + ":")) c += " fx-pulse";
+  return c;
+}
+
+function render() {
+  const mv = moves();
+  const activeMove = settings.mode === "easy" ? pending : (won || settingsOpen ? null : mv[scanIdx]);
+  const hl = highlightFor(activeMove);
+
+  $("modeTag").textContent = settings.mode === "easy" ? "Easy Play" : "Choose Moves";
+
+  // stock
+  const ps = $("pStock");
+  ps.className = "pile stock" + pileCls("stock", hl);
+  ps.innerHTML = "";
+  if (game.stock.length) ps.appendChild(backEl()); else ps.appendChild(slotEl("", "↻"));
+  const cnt = document.createElement("div");
+  cnt.className = "count"; cnt.textContent = game.stock.length;
+  ps.appendChild(cnt);
+
+  // waste
+  const pw = $("pWaste");
+  pw.className = "pile" + pileCls("waste", hl);
+  pw.innerHTML = "";
+  const w = topCard(game.waste);
+  pw.appendChild(w ? cardEl(w, hl.cards.has(w.id)) : slotEl(""));
+
+  // foundations
+  game.foundations.forEach((f, si) => {
+    const el = $("pFound" + si);
+    el.className = "pile" + pileCls(`found-${si}`, hl);
+    el.innerHTML = "";
+    const t = topCard(f);
+    if (t) el.appendChild(cardEl(t, false));
+    else el.appendChild(slotEl("suit-slot " + (SUITS[si].color === "red" ? "red" : "black"), SUITS[si].s));
+  });
+
+  // tableau
+  const tr = $("tabRow");
+  tr.innerHTML = "";
+  game.tableau.forEach((pile, i) => {
+    const col = document.createElement("div");
+    col.className = "column" + pileCls(`tab-${i}`, hl);
+    if (pile.length === 0) col.appendChild(slotEl("tall-slot"));
+    pile.forEach((c, idx) => {
+      const wrap = document.createElement("div");
+      wrap.className = "stacked " + (idx === 0 ? "first" : c.faceUp ? "up-off" : "down-off");
+      wrap.appendChild(c.faceUp ? cardEl(c, hl.cards.has(c.id)) : backEl());
+      col.appendChild(wrap);
+    });
+    tr.appendChild(col);
+  });
+
+  // caption
+  let caption;
+  if (won) caption = { parts: ["🏆 YOU WON! Press your switch to play again"], tone: "win" };
+  else if (settings.mode === "scan" && activeMove)
+    caption = { parts: moveWords(activeMove).parts, tone: activeMove.type === "newgame" ? "idle" : "scan" };
+  else caption = message;
+
+  const cap = $("caption");
+  cap.className = "caption " + caption.tone;
+  const inner = $("captionInner");
+  inner.innerHTML = "";
+  caption.parts.forEach(p => {
+    if (typeof p === "string") inner.appendChild(document.createTextNode(p));
+    else inner.appendChild(chipEl(p.chip));
+  });
+
+  // scan dots
+  const dots = $("dots");
+  if (settings.mode === "scan" && !won && mv.length > 1) {
+    dots.hidden = false;
+    dots.innerHTML = "";
+    mv.forEach((_, i) => {
+      const d = document.createElement("span");
+      d.className = i === scanIdx ? "dot on" : "dot";
+      dots.appendChild(d);
+    });
+  } else dots.hidden = true;
+
+  $("winOverlay").hidden = !won;
+  renderConfetti();
+}
+
+function renderConfetti() {
+  const layer = $("confettiLayer");
+  layer.innerHTML = "";
+  confettiItems.forEach(c => {
+    const s = document.createElement("span");
+    s.className = "confetto";
+    s.style.left = c.x + "%";
+    s.style.animationDuration = c.d + "s";
+    s.style.animationDelay = c.delay + "s";
+    s.textContent = c.emoji;
+    layer.appendChild(s);
+  });
+}
+
+function burstConfetti(big) {
+  const n = big ? 80 : 16;
+  const items = Array.from({ length: n }, (_, i) => ({
+    id: Date.now() + "-" + i,
+    x: Math.random() * 100,
+    d: 2 + Math.random() * 2,
+    delay: Math.random() * (big ? 1.5 : 0.3),
+    emoji: ["⭐", "🎉", "✨", "💛", "🎈"][Math.floor(Math.random() * 5)],
+  }));
+  confettiItems = confettiItems.concat(items);
+  renderConfetti();
+  setTimeout(() => {
+    confettiItems = confettiItems.filter(it => !items.includes(it));
+    renderConfetti();
+  }, big ? 5000 : 2600);
+}
+
+/* ---------- scanning timer ---------- */
+function stopScan() { if (scanTimer) { clearInterval(scanTimer); scanTimer = null; } }
+function startScan() {
+  stopScan();
+  if (settings.mode !== "scan" || won || settingsOpen || pending) return;
+  scanTimer = setInterval(() => {
+    const mv = moves();
+    scanIdx = (scanIdx + 1) % mv.length;
+    sndScan();
+    const m = mv[scanIdx];
+    if (m) speak(moveWords(m).say);
+    render();
+  }, SCAN_SPEEDS[settings.speed]);
+}
+
+/* ---------- run a move ---------- */
+function runMove(m) {
+  if (m.type === "newgame") {
+    game = newGameState();
+    won = false;
+    message = { parts: ["Here's a fresh game! 🃏"], tone: "idle" };
+    speak("New game");
+    scanIdx = 0;
+    render(); startScan();
+    return;
+  }
+  const { state, fx, won: didWin } = applyMove(game, m);
+  game = state;
+  scanIdx = 0;
+  if (fx) {
+    fxKey = fx.pileKey + ":" + Date.now();
+    if (fx.kind === "found") { sndFound(); burstConfetti(false); }
+    else sndMove();
+  }
+  if (didWin) {
+    won = true;
+    sndWin(); burstConfetti(true);
+    speak("You won! Amazing!");
+    stopScan();
+    render();
+    return;
+  }
+  if (settings.mode === "easy") {
+    const isFound = m.type === "tf" || m.type === "wf";
+    const list = isFound ? PRAISE_FOUND : PRAISE;
+    praiseIdx = (praiseIdx + 1) % list.length;
+    const txt = (m.type === "draw" || m.type === "recycle") ? "Here comes a new card!" : list[praiseIdx];
+    message = { parts: [txt], tone: isFound ? "star" : "praise" };
+    if (isFound || Math.random() < 0.4) speak(txt.replace(/[^\w\s!']/g, ""));
+  }
+  render(); startScan();
+}
+
+/* ---------- THE switch (quick tap) ---------- */
+let lastPress = 0;
+function onSwitch() {
+  const now = Date.now();
+  if (now - lastPress < 300) return;  // debounce
+  lastPress = now;
+  ensureAudio();
+  if (settingsOpen) return;
+  if (won) { runMove({ type: "newgame" }); return; }
+  if (pending) return;
+  if (settings.mode === "easy") {
+    const m = moves()[0];
+    if (!m) return;
+    pending = m;
+    render();                        // flash what's about to happen
+    setTimeout(() => { pending = null; runMove(m); }, 400);
+  } else {
+    const mv = moves();
+    const m = mv[scanIdx];
+    if (m) runMove(m);
+  }
+}
+
+/* ---------- settings panel ---------- */
+function openSettings() {
+  settingsOpen = true;
+  stopScan();
+  syncSettingsUI();
+  $("settingsOverlay").hidden = false;
+}
+function closeSettings() {
+  settingsOpen = false;
+  $("settingsOverlay").hidden = true;
+  scanIdx = 0;
+  render(); startScan();
+}
+function syncSettingsUI() {
+  $("optEasy").className = "opt" + (settings.mode === "easy" ? " on" : "");
+  $("optScan").className = "opt" + (settings.mode === "scan" ? " on" : "");
+  $("speedSetting").style.display = settings.mode === "scan" ? "" : "none";
+  ["slow","medium","fast"].forEach(s => {
+    $("opt" + s[0].toUpperCase() + s.slice(1)).className = "opt" + (settings.speed === s ? " on" : "");
+  });
+  $("optSound").className = "opt" + (settings.sound ? " on" : "");
+  $("optSound").textContent = "Sounds " + (settings.sound ? "On" : "Off");
+  $("optVoice").className = "opt" + (settings.voice ? " on" : "");
+  $("optVoice").textContent = "Voice " + (settings.voice ? "On" : "Off");
+}
+$("gearBtn").addEventListener("click", e => { e.stopPropagation(); openSettings(); });
+$("optEasy").addEventListener("click", () => { settings.mode = "easy"; saveSettings(); syncSettingsUI(); });
+$("optScan").addEventListener("click", () => { settings.mode = "scan"; saveSettings(); syncSettingsUI(); });
+$("optSlow").addEventListener("click", () => { settings.speed = "slow"; saveSettings(); syncSettingsUI(); });
+$("optMedium").addEventListener("click", () => { settings.speed = "medium"; saveSettings(); syncSettingsUI(); });
+$("optFast").addEventListener("click", () => { settings.speed = "fast"; saveSettings(); syncSettingsUI(); });
+$("optSound").addEventListener("click", () => { settings.sound = !settings.sound; saveSettings(); syncSettingsUI(); });
+$("optVoice").addEventListener("click", () => { settings.voice = !settings.voice; saveSettings(); syncSettingsUI(); });
+$("optNewGame").addEventListener("click", () => {
+  game = newGameState(); won = false; scanIdx = 0;
+  message = { parts: ["Here's a fresh game! 🃏"], tone: "idle" };
+  closeSettings();
+});
+$("optBack").addEventListener("click", closeSettings);
+$("optHome").addEventListener("click", () => { window.location.href = "../index.html"; });
+
+/* ---------- SwitchMate hold semantics: tap=play, 2s=settings, 10s=hub ---------- */
+let touchStart = 0, holdInt = null, holdFired10 = false, holdFired2 = false;
+document.documentElement.addEventListener("touchstart", function(e) {
+  if (touchStart) return;
+  if (e.target.closest && e.target.closest(".panel, .gear")) return;  // real controls stay tappable
+  e.preventDefault();
+  touchStart = Date.now(); holdFired10 = holdFired2 = false;
+  $("holdFill").style.width = "0%";
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    $("holdFill").style.width = Math.min(100, (elapsed / 10) * 100) + "%";
+    if (elapsed >= 10 && !holdFired10) {
+      holdFired10 = true; clearInterval(holdInt); holdInt = null;
+      $("holdFill").style.width = "100%";
+      setTimeout(() => { window.location.href = "../index.html"; }, 300);
+    } else if (elapsed >= 2 && !holdFired2) {
+      holdFired2 = true;
+      $("holdStatus").textContent = "Settings… (10s = home)";
+      $("holdStatus").classList.add("show");
+    }
+  }, 50);
+}, { passive: false });
+document.documentElement.addEventListener("touchend", function(e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  $("holdFill").style.width = "0%";
+  $("holdStatus").classList.remove("show");
+  if (holdFired10) { holdFired10 = false; return; }
+  if (elapsed >= 2) { settingsOpen ? closeSettings() : openSettings(); }
+  else onSwitch();
+}, { passive: true });
+document.documentElement.addEventListener("touchcancel", function() {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0; holdFired10 = holdFired2 = false;
+  $("holdFill").style.width = "0%";
+  $("holdStatus").classList.remove("show");
+}, { passive: true });
+
+/* ---------- keyboard / pointer ---------- */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { settingsOpen ? closeSettings() : openSettings(); return; }
+  if (e.repeat) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (["Tab","F5","F11","F12"].includes(e.key)) return;
+  if (settingsOpen) return;   // let helper use the panel with keyboard/mouse
+  if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter" || true) {
+    e.preventDefault();
+    onSwitch();
+  }
+});
+document.addEventListener("pointerdown", e => {
+  if (e.pointerType === "touch") return;  // handled by touch handlers
+  if (e.target.closest && e.target.closest(".panel, .gear")) return;
+  onSwitch();
+});
+
+/* ---------- go ---------- */
+render();
+startScan();
+</script>
+<script src="../firebase-init.js"></script>
+<script src="../switchmate-tracker.js"></script>
+</body>
+</html>
