@@ -567,6 +567,11 @@ function showHistory() {
 }
 function playSeed(seed) { startGame(makeGenome(seed)); }
 function newRandomGame() { playSeed(Math.floor(Math.random() * 1000000)); }
+// Deep link: ?seed=NNN auto-starts that exact game (shareable "seed of the week" links)
+(function () {
+  const s = parseInt(new URLSearchParams(location.search).get('seed'), 10);
+  if (Number.isFinite(s) && s >= 0) playSeed(s);
+})();
 
 // Menu button wiring
 document.getElementById('menuOpts').addEventListener('click', e => {
