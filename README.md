@@ -1,7 +1,13 @@
-# Switch Access — A Project of Best Polity LLC
+# SwitchMate / Switch Access — A Project of Best Polity LLC
 
 Single-switch accessibility tools for people with developmental disabilities.
 Built with care, perpetually free.
+
+## Place in the Polity
+
+Rift-Signal is Best Polity LLC's flagship sub-unit and product. SwitchMate / Switch Access is an earlier product and technical predecessor in Rift-Signal's accessibility lineage. It demonstrates Best Polity's use of state-of-the-art technology and accessible interaction design to help people succeed.
+
+This repository remains the independently deployed SwitchMate / Switch Access implementation until a later approved specification changes its lifecycle status. Best Polity Google Workspace is authoritative for governance and product records; this Git repository is the versioned executable mirror.
 
 - **AAC keyboard** with row-column scanning, word prediction, AI
 - **Calculator** with fractions and percentages
