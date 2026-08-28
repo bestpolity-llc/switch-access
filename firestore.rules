@@ -61,9 +61,11 @@ service cloud.firestore {
 
     // ---- participant invite links (capability URLs) ----
     match /links/{token} {
-      allow get: if true;      // resolve token -> session id
+      allow get: if true;                     // participant resolves token -> session id
+      allow create: if signedIn();            // staff create the mapping when starting a session
+      allow update: if signedIn();            // staff may re-point a token (rare; safe — token is secret)
+      allow delete: if false;
       allow list: if false;
-      allow write: if false;
     }
 
     // ---- existing SwitchMate public collections (anonymous writes) ----
