@@ -1,39 +1,49 @@
-// SwitchMate — Firestore security rules (staff/participant portal)
-// Paste this into Firebase Console → Firestore → Rules, then Publish.
+// SwitchMate + Best Polity — unified Firestore security rules.
+// Paste into Firebase Console → Firestore → Rules, then Publish.
 //
-// Model:
-//   staff/{uid}            — approved staff members (admin writes these)
-//   staff_requests/{uid}   — pending access requests (self-written)
-//   clients/{clientId}     — participant records (staff-writable)
-//   sessions/{sessionId}   — activity sessions + billing/narrative metrics
+// Two systems share one project:
+//   A) SwitchMate (single-switch accessibility + day-hab portal)
+//      staff/{uid}, staff_requests/{uid}, clients/{id}, sessions/{id}
+//      (+ participant_log), links/{token}, switchmate_analytics,
+//      game_maker_events, messages, users/{uid}
+//   B) Best Polity paperwork / CRM (multi-tenant)
+//      users/{userId}, accounts/{accountId} + invoices/quotes/leads/clients/jobs
 //
-// IMPORTANT: until these rules are published, the existing collections
-// (switchmate_analytics, messages, game_maker_events) remain open. Lock
-// those too when you deploy.
+// NOTE: both systems use the top-level users/{…} collection. SwitchMate
+// stores synced preferences there; the CRM stores user records there.
+// A single unified rule (create/read/update by the owner) serves both.
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ============================================================
+    // A) SWITCHMATE
+    // ============================================================
+
     // ---- staff registry (write by admin/service account only) ----
     match /staff/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
+      allow read: if isUser(uid);
       allow write: if false; // no client-side writes; manage in console
     }
 
-    // ---- access requests ----
+    // ---- access requests (self-written by aspiring staff) ----
     match /staff_requests/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow create: if signedIn() && request.auth.uid == uid;
+      allow read: if isUser(uid);
+      allow create: if isUser(uid);
     }
 
-    // ---- participant records ----
+    // ---- participant records (staff-scoped) ----
     match /clients/{clientId} {
-      allow read, write: if signedIn()
+      allow read, write: if isSignedIn()
         && (resource == null
             || request.auth.uid in resource.data.staffIds
             || request.auth.uid in request.resource.data.staffIds);
@@ -41,13 +51,13 @@ service cloud.firestore {
 
     // ---- activity sessions ----
     match /sessions/{sessionId} {
-      // staff can read their own sessions; anyone with a participant link
-      // (i.e. a session that has a participantToken) can read that session.
-      allow get: if (signedIn() && request.auth.uid in resource.data.staffIds)
+      // staff can read their own sessions; anyone holding a participant
+      // invite link (session has a participantToken) can read that session.
+      allow get: if (isSignedIn() && request.auth.uid in resource.data.staffIds)
                   || resource.data.participantToken != null;
-      allow list: if signedIn() && request.auth.uid in resource.data.staffIds;
-      allow create: if signedIn() && request.auth.uid in request.resource.data.staffIds;
-      allow update: if signedIn() && request.auth.uid in resource.data.staffIds;
+      allow list: if isSignedIn() && request.auth.uid in resource.data.staffIds;
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.staffIds;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.staffIds;
       allow delete: if false;
 
       // participant progress log (append-only, no auth — capability-gated
@@ -61,15 +71,14 @@ service cloud.firestore {
 
     // ---- participant invite links (capability URLs) ----
     match /links/{token} {
-      allow get: if true;                     // participant resolves token -> session id
-      allow create: if signedIn();            // staff create the mapping when starting a session
-      allow update: if signedIn();            // staff may re-point a token (rare; safe — token is secret)
+      allow get: if true;              // participant resolves token -> session id
+      allow create: if isSignedIn();   // staff create the mapping when starting a session
+      allow update: if isSignedIn();
       allow delete: if false;
       allow list: if false;
     }
 
-    // ---- existing SwitchMate public collections (anonymous writes) ----
-    // Keep as-is until you decide to tighten them:
+    // ---- SwitchMate public collections (anonymous writes, no reads) ----
     match /switchmate_analytics/{doc} {
       allow read: if false;
       allow write: if true;
@@ -82,8 +91,36 @@ service cloud.firestore {
       allow read: if false;
       allow create: if true;
     }
-    match /users/{doc} {
-      allow read, write: if signedIn() && request.auth.uid == doc;
+
+    // ============================================================
+    // SHARED — users/{userId}
+    // SwitchMate pref-sync (users/{uid}) + CRM user records share this.
+    // ============================================================
+    match /users/{userId} {
+      allow create, read, update: if isUser(userId);
+    }
+
+    // ============================================================
+    // B) BEST POLITY PAPERWORK / CRM (multi-tenant)
+    // ============================================================
+
+    // Ownership check: fetch the account doc and verify caller is the owner.
+    // (memberUids multi-tenant support can be added later once we need it.)
+    function isAccountOwner(accountId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/accounts/$(accountId)).data.ownerUid == request.auth.uid;
+    }
+
+    match /accounts/{accountId} {
+      allow get, update: if isAccountOwner(accountId);
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if false;
+
+      match /invoices/{invoiceId} { allow list, get, write: if isAccountOwner(accountId); }
+      match /quotes/{quoteId}     { allow list, get, write: if isAccountOwner(accountId); }
+      match /leads/{leadId}       { allow list, get, write: if isAccountOwner(accountId); }
+      match /clients/{clientId}   { allow list, get, write: if isAccountOwner(accountId); }
+      match /jobs/{jobId}         { allow list, get, write: if isAccountOwner(accountId); }
     }
   }
 }
