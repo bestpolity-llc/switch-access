@@ -241,6 +241,7 @@
       <h3 id="summaryTitle"></h3>
       <p class="muted" id="summaryMeta"></p>
       <div class="narrative" id="summaryNarrative"></div>
+      <div class="narrative" id="summaryParticipant" style="margin-top:12px;display:none"></div>
     </div>
     <button class="btn" onclick="closeSummary()">Done</button>
   </div>
@@ -649,7 +650,7 @@ async function loadSessions() {
       const total = (d.steps || []).length;
       const when = d.startedAt && d.startedAt.toDate ? d.startedAt.toDate().toLocaleDateString() : '';
       return `<div class="client-item" onclick="viewSession('${d.id}')" style="cursor:pointer">
-        <div><div class="name">${esc(d.clientName)}</div>
+        <div><div class="name">${esc(d.clientName)}${d.participantToken ? ' <span title="participant link">🔗</span>' : ''}</div>
           <div class="meta">${esc(d.narrative || '').split('\n')[0]}</div></div>
         <span class="badge ${done === total ? 'ok' : 'warn'}">${done}/${total} goals · ${d.durationMin}m · ${when}</span>
       </div>`;
@@ -670,7 +671,66 @@ async function viewSession(id) {
     const done = (s.steps || []).filter(x => x.log && x.log.completed).length;
     $('summaryMeta').textContent = done + ' of ' + (s.steps || []).length + ' goals completed';
     $('summaryNarrative').textContent = s.narrative || '';
+    await renderParticipantSummary(id, s);
   } catch (e) { console.error(e); }
+}
+
+// ---------- participant progress (from invite-link sessions) ----------
+async function loadParticipantLog(sessionId) {
+  try {
+    const snap = await DB.collection('sessions').doc(sessionId)
+      .collection('participant_log').orderBy('ts').get();
+    return snap.docs.map(d => d.data());
+  } catch (e) { console.error(e); return []; }
+}
+
+function aggregateParticipant(logs, steps) {
+  const byStep = {};
+  logs.forEach(l => {
+    if (l.step == null) return;
+    byStep[l.step] = byStep[l.step] || {};
+    if (l.type === 'step_start' && !byStep[l.step].start) byStep[l.step].start = l;
+    if (l.type === 'step_done' && !byStep[l.step].done) byStep[l.step].done = l;
+  });
+  let completed = 0, totalSec = 0;
+  const lines = (steps || []).map((s, i) => {
+    const e = byStep[i];
+    if (e && e.done) {
+      completed++;
+      const sec = e.done.elapsedSec || 0;
+      totalSec += sec;
+      return '✓ ' + s.goalTitle + ' — ' + fmtSec(sec);
+    } else if (e && e.start) {
+      return '… ' + s.goalTitle + ' — started, not finished';
+    }
+    return '— ' + s.goalTitle + ' — not started';
+  });
+  const opened = logs.find(l => l.type === 'opened');
+  const doneAll = logs.find(l => l.type === 'session_done');
+  return { completed, totalSec, lines, opened: !!opened, doneAll: !!doneAll };
+}
+
+function fmtSec(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m > 0 ? m + 'm ' + s + 's' : s + 's';
+}
+
+async function renderParticipantSummary(sessionId, s) {
+  const box = $('summaryParticipant');
+  const logs = await loadParticipantLog(sessionId);
+  if (!logs.length) { box.style.display = 'none'; return; }
+  const agg = aggregateParticipant(logs, s.steps);
+  box.style.display = 'block';
+  const status = agg.doneAll ? 'completed the full session on their device 🎉'
+               : agg.opened ? 'opened the session on their device'
+               : 'received the session link';
+  box.innerHTML =
+    '<strong>👤 Participant device activity</strong><br>' +
+    'Participant ' + status + '.<br>' +
+    agg.completed + ' of ' + (s.steps || []).length + ' activities finished · ' +
+    'total activity time ' + fmtSec(agg.totalSec) + '.<br><br>' +
+    agg.lines.join('<br>');
 }
 </script>
 </body>
