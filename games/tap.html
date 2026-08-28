@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tap</title>
+<title>SwitchMate — Tap the Dot</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -335,7 +335,7 @@ document.documentElement.addEventListener('touchstart', function(e) {
       holdFired = true; clearInterval(holdInt); holdInt = null;
       document.getElementById('holdFill').style.width = '100%';
       document.getElementById('holdStatus').textContent = '×'; document.getElementById('holdStatus').classList.add('show');
-      setTimeout(() => { window.location.href = 'index.html'; }, 300);
+      setTimeout(() => { window.location.href = '../index.html'; }, 300);
     } else if (elapsed >= 2 && !holdFired) {
       document.getElementById('holdStatus').textContent = 'Hold...'; document.getElementById('holdStatus').classList.add('show');
     }
@@ -367,7 +367,7 @@ document.documentElement.addEventListener('touchcancel', function(e) {
 }, { passive: true });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
+  if (e.key === 'Escape') { window.location.href = '../index.html'; return; }
   e.preventDefault();
   handleAction();
 });

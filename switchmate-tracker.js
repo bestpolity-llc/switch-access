@@ -29,12 +29,21 @@
   }
 
   function trackPageView() {
-    // Wait for Firebase to be ready
+    // Wait for Firebase to be ready, but give up after a bounded number of
+    // attempts so a missing SDK (offline / blocked CDN / ad-blocker) doesn't
+    // reschedule itself forever and drain battery on low-power switch devices.
+    const MAX_ATTEMPTS = 6;
+    const RETRY_MS = 500;
+    let attempts = 0;
+
     function tryTrack() {
+      attempts++;
       try {
         if (typeof DB === 'undefined' || typeof firebase === 'undefined') {
-          // Firebase not loaded yet — retry
-          setTimeout(tryTrack, 500);
+          // Firebase not loaded yet — retry up to MAX_ATTEMPTS
+          if (attempts < MAX_ATTEMPTS) {
+            setTimeout(tryTrack, RETRY_MS);
+          }
           return;
         }
 
