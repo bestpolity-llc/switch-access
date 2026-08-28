@@ -671,11 +671,21 @@ document.addEventListener('touchcancel', function(e) {
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') return;
-  if (switchModeOn) {
+  if (e.repeat) return;
+  // Space (or any key) turns switch mode ON if it isn't already, then the
+  // next press selects. This lets a switch user boot straight into scanning
+  // without needing the 10-second hold gesture.
+  if (!switchModeOn) {
     e.preventDefault();
-    if (!scanning) { startScanning(); return; }
-    selectCurrent();
+    switchModeOn = true;
+    saveSwitchMode(switchModeOn);
+    updateModeUI();
+    startScanning();
+    return;
   }
+  e.preventDefault();
+  if (!scanning) { startScanning(); return; }
+  selectCurrent();
 });
 
 // ============================================================
