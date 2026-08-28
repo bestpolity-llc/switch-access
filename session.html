@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>SwitchMate — Activity</title>
+<meta name="theme-color" content="#4A7BC4">
+<style>
+  :root {
+    --bg: #EFEADE;
+    --ink: #1a1a2e;
+    --brand: #4A7BC4;
+    --gold: #C8934A;
+    --ok: #43a047;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent; touch-action: none;
+    overflow: hidden;
+  }
+  .screen {
+    position: fixed; inset: 0;
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 28px;
+  }
+  .screen.active { display: flex; }
+
+  .emoji { font-size: clamp(5rem, 24vw, 9rem); line-height: 1; margin-bottom: 14px; }
+  h1 { font-size: clamp(1.6rem, 7vw, 2.6rem); font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+  h2 { font-size: clamp(1.2rem, 5vw, 1.8rem); font-weight: 700; color: var(--brand); margin-bottom: 6px; }
+  p { font-size: clamp(1rem, 4vw, 1.3rem); color: #555; max-width: 460px; line-height: 1.5; }
+
+  .activity-name {
+    margin-top: 12px; padding: 16px 24px;
+    background: #fff; border: 3px solid var(--brand); border-radius: 20px;
+    font-size: clamp(1.2rem, 5vw, 1.6rem); font-weight: 700; color: var(--brand);
+  }
+  .goal-count {
+    margin-top: 10px; font-size: 0.9rem; color: #A0927A; font-weight: 600;
+  }
+  .launch {
+    display: inline-block; margin-top: 20px; padding: 16px 36px;
+    background: var(--brand); color: #fff; border-radius: 60px;
+    font-size: clamp(1.1rem, 4.5vw, 1.4rem); font-weight: 800; text-decoration: none;
+    touch-action: manipulation;
+  }
+  .launch:active { transform: scale(0.96); }
+  .hint { margin-top: 26px; font-size: clamp(0.85rem, 3.5vw, 1rem); color: #A0927A; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hint { animation: none; }
+  }
+
+  .done-list { text-align: left; margin-top: 16px; }
+  .done-list div { padding: 8px 0; font-size: 1.05rem; font-weight: 600; }
+
+  .hold-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 6px; background: transparent; z-index: 60; pointer-events: none; }
+  .hold-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#4CAF50,#FFD700,#FF5722); transition: width .1s linear; border-radius: 0 3px 3px 0; }
+  .hold-status { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 1rem; color: #FFD700; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+  .hold-status.show { opacity: 1; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div class="screen" id="welcomeScreen">
+  <div class="emoji">👋</div>
+  <h1 id="welcomeTitle">Hi there!</h1>
+  <p id="welcomeSub">Let's do some fun activities together.</p>
+  <div class="hint">👆 Tap or press any key to begin</div>
+</div>
+
+<!-- STEP -->
+<div class="screen" id="stepScreen">
+  <div class="emoji" id="stepIcon">🎯</div>
+  <h2 id="stepGoal">Goal</h2>
+  <div class="activity-name" id="stepActivity">Activity</div>
+  <div class="goal-count" id="stepCount"></div>
+  <a class="launch" id="stepLaunch" href="#" target="_blank" rel="noopener">▶️ Start</a>
+  <div class="hint">👆 Tap or press any key when you're done</div>
+</div>
+
+<!-- DONE -->
+<div class="screen" id="doneScreen">
+  <div class="emoji">🎉</div>
+  <h1 id="doneTitle">All done!</h1>
+  <p id="doneSub">Great job today!</p>
+  <div class="done-list" id="doneList"></div>
+  <div class="hint">👆 Tap or press any key to start again</div>
+</div>
+
+<div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
+<div class="hold-status" id="holdStatus"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   SwitchMate — Participant activity session
+   Opened via an invite link (?t=<token>). No sign-in: the token
+   resolves to a session, and the participant walks through the
+   pre-built activities, switch-accessible (tap / any key).
+   Progress is appended to the session's participant_log.
+   ============================================================ */
+
+const $ = id => document.getElementById(id);
+const fs = firebase.firestore;
+const token = new URLSearchParams(location.search).get('t');
+
+let session = null;      // { id, clientName, durationMin, steps[] }
+let stepIndex = -1;
+let stepStartMs = 0;
+
+function show(name) {
+  ['welcomeScreen','stepScreen','doneScreen'].forEach(id => $(id).classList.toggle('active', id === name));
+}
+
+function log(type, extra) {
+  if (!session || !session.id) return;
+  try {
+    DB.collection('sessions').doc(session.id).collection('participant_log').add({
+      type, ts: fs.FieldValue.serverTimestamp(), ...(extra || {})
+    });
+  } catch (e) {}
+}
+
+async function boot() {
+  if (!token) { showError('Missing invite link.'); return; }
+  try {
+    const linkDoc = await DB.collection('links').doc(token).get();
+    if (!linkDoc.exists) { showError('This invite link is no longer valid.'); return; }
+    const sessionId = linkDoc.data().sessionId;
+    const sDoc = await DB.collection('sessions').doc(sessionId).get();
+    if (!sDoc.exists) { showError('This activity session was not found.'); return; }
+    session = { id: sessionId, ...sDoc.data() };
+    initWelcome();
+    log('opened');
+  } catch (e) {
+    console.error(e);
+    showError('Something went wrong loading this session.');
+  }
+}
+
+function showError(msg) {
+  $('welcomeTitle').textContent = 'Oops';
+  $('welcomeSub').textContent = msg;
+  $('welcomeScreen').classList.add('active');
+}
+
+function initWelcome() {
+  const n = (session.steps || []).length;
+  $('welcomeTitle').textContent = 'Hi ' + (session.clientName || 'there') + '!';
+  $('welcomeSub').textContent = n
+    ? 'We have ' + n + ' fun ' + (n === 1 ? 'activity' : 'activities') + ' for you today.'
+    : 'Ready when you are!';
+  show('welcomeScreen');
+}
+
+function begin() {
+  stepIndex = -1;
+  nextStep();
+}
+
+function nextStep() {
+  stepIndex++;
+  const steps = session.steps || [];
+  if (stepIndex >= steps.length) { finish(); return; }
+  const s = steps[stepIndex];
+  stepStartMs = Date.now();
+  $('stepIcon').textContent = GOAL_ICONS[s.goalType] || '🎯';
+  $('stepGoal').textContent = 'Goal: ' + s.goalTitle;
+  $('stepActivity').textContent = s.activity.title || 'Activity';
+  $('stepCount').textContent = 'Activity ' + (stepIndex + 1) + ' of ' + steps.length;
+  const launch = $('stepLaunch');
+  launch.href = s.activity.url || '#';
+  launch.style.display = s.activity.url ? '' : 'none';
+  show('stepScreen');
+  log('step_start', { step: stepIndex, goal: s.goalTitle });
+}
+
+function advance() {
+  if (stepIndex >= 0 && stepIndex < (session.steps || []).length) {
+    const s = session.steps[stepIndex];
+    log('step_done', { step: stepIndex, goal: s.goalTitle, elapsedSec: Math.round((Date.now() - stepStartMs) / 1000) });
+  }
+  nextStep();
+}
+
+function finish() {
+  $('doneTitle').textContent = 'All done, ' + (session.clientName || 'friend') + '!';
+  $('doneSub').textContent = 'You finished ' + (session.steps || []).length + ' activities. Great job!';
+  $('doneList').innerHTML = (session.steps || []).map(s => {
+    const icon = GOAL_ICONS[s.goalType] || '🎯';
+    return '<div>' + icon + ' ' + esc(s.goalTitle) + '</div>';
+  }).join('');
+  show('doneScreen');
+  log('session_done');
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const GOAL_ICONS = { social: '🤝', typing: '⌨️', games: '🎮', life: '🧭' };
+
+function handleAction() {
+  if ($('welcomeScreen').classList.contains('active')) { begin(); return; }
+  if ($('stepScreen').classList.contains('active')) { advance(); return; }
+  if ($('doneScreen').classList.contains('active')) { begin(); return; }
+}
+
+function goHome() { window.location.href = 'index.html'; }
+
+/* ---------- SwitchMate hold semantics: 2s = back, 10s = home ---------- */
+let touchStart = 0, holdInt = null, holdFired10 = false;
+document.documentElement.addEventListener('touchstart', function(e) {
+  if (touchStart) return;
+  if (e.target.closest && e.target.closest('.launch')) return; // let the launch link work
+  e.preventDefault();
+  touchStart = Date.now(); holdFired10 = false;
+  $('holdFill').style.width = '0%';
+  holdInt = setInterval(() => {
+    const elapsed = (Date.now() - touchStart) / 1000;
+    $('holdFill').style.width = Math.min(100, (elapsed / 10) * 100) + '%';
+    if (elapsed >= 10 && !holdFired10) {
+      holdFired10 = true; clearInterval(holdInt); holdInt = null;
+      $('holdFill').style.width = '100%';
+      $('holdStatus').textContent = '×'; $('holdStatus').classList.add('show');
+      setTimeout(goHome, 300);
+    } else if (elapsed >= 2) {
+      $('holdStatus').textContent = 'Hold… (10s = home)'; $('holdStatus').classList.add('show');
+    }
+  }, 50);
+}, { passive: false });
+
+document.documentElement.addEventListener('touchend', function(e) {
+  if (!touchStart) return;
+  const elapsed = (Date.now() - touchStart) / 1000;
+  touchStart = 0;
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  $('holdFill').style.width = '0%';
+  $('holdStatus').classList.remove('show');
+  if (holdFired10) { holdFired10 = false; return; }
+  if (elapsed >= 2) {
+    // back one step (or to welcome)
+    if (stepIndex > 0) { stepIndex--; nextStep(); }
+    else { initWelcome(); }
+  } else {
+    handleAction();
+  }
+}, { passive: true });
+
+document.documentElement.addEventListener('touchcancel', function() {
+  if (holdInt) { clearInterval(holdInt); holdInt = null; }
+  touchStart = 0; holdFired10 = false;
+  $('holdFill').style.width = '0%';
+  $('holdStatus').classList.remove('show');
+}, { passive: true });
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { goHome(); return; }
+  if (e.repeat) return;
+  e.preventDefault();
+  handleAction();
+});
+
+boot();
+</script>
+</body>
+</html>

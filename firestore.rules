@@ -41,10 +41,29 @@ service cloud.firestore {
 
     // ---- activity sessions ----
     match /sessions/{sessionId} {
-      allow read: if signedIn() && request.auth.uid in resource.data.staffIds;
+      // staff can read their own sessions; anyone with a participant link
+      // (i.e. a session that has a participantToken) can read that session.
+      allow get: if (signedIn() && request.auth.uid in resource.data.staffIds)
+                  || resource.data.participantToken != null;
+      allow list: if signedIn() && request.auth.uid in resource.data.staffIds;
       allow create: if signedIn() && request.auth.uid in request.resource.data.staffIds;
       allow update: if signedIn() && request.auth.uid in resource.data.staffIds;
       allow delete: if false;
+
+      // participant progress log (append-only, no auth — capability-gated
+      // by the unguessable session id revealed via the invite link)
+      match /participant_log/{logId} {
+        allow get, list: if true;
+        allow create: if true;
+        allow update, delete: if false;
+      }
+    }
+
+    // ---- participant invite links (capability URLs) ----
+    match /links/{token} {
+      allow get: if true;      // resolve token -> session id
+      allow list: if false;
+      allow write: if false;
     }
 
     // ---- existing SwitchMate public collections (anonymous writes) ----
