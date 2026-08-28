@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwitchMate for Providers — Day Hab, Respite &amp; Supported Employment</title>
+<meta name="description" content="SwitchMate gives day-hab staff a single-switch activity system: build goal-based sessions for the people you serve, run them on any device, and collect billing and narrative documentation automatically.">
+<meta name="theme-color" content="#4A7BC4">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SwitchMate">
+<meta property="og:title" content="SwitchMate for Providers">
+<meta property="og:description" content="Single-switch activity sessions tied to individual plan goals, with automatic billing and narrative documentation.">
+<meta property="og:image" content="https://switch.bestpolity.com/rcp-switchmate-share.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
+<style>
+  :root {
+    --bg: #EFEADE;
+    --ink: #1a1a2e;
+    --muted: #5b5b6e;
+    --brand: #4A7BC4;
+    --brand-dark: #3a6bb4;
+    --gold: #C8934A;
+    --ok: #43a047;
+    --card: #ffffff;
+    --line: #e3ded0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 22px; }
+
+  /* header */
+  header {
+    padding: 28px 0 8px;
+  }
+  header .top { display: flex; align-items: center; gap: 12px; }
+  header .logo { font-size: 2.2rem; }
+  header .wordmark { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+  header .wordmark span { color: var(--brand); }
+  header .sub { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
+
+  /* hero */
+  .hero { padding: 44px 0 40px; }
+  .hero h1 {
+    font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 800; line-height: 1.1;
+    letter-spacing: -0.03em; max-width: 18ch;
+  }
+  .hero h1 .accent { color: var(--brand); }
+  .hero p.lead { font-size: clamp(1.05rem, 2.6vw, 1.3rem); color: var(--muted); max-width: 56ch; margin-top: 16px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+  .btn {
+    display: inline-block; padding: 14px 26px; border-radius: 60px; font-weight: 700;
+    text-decoration: none; font-size: 1rem; transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: var(--brand); color: #fff; }
+  .btn.primary:hover { background: var(--brand-dark); }
+  .btn.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); }
+
+  section { padding: 34px 0; }
+  .kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.75rem; font-weight: 700; color: var(--gold); margin-bottom: 10px; }
+  h2 { font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 22px; }
+  @media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
+  .card .ic { font-size: 2rem; margin-bottom: 8px; }
+  .card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+  .card p { color: var(--muted); font-size: 0.94rem; }
+
+  .steps { margin-top: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .step { display: flex; gap: 16px; align-items: flex-start; }
+  .step .n {
+    flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--brand);
+    color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+  }
+  .step .t b { font-size: 1.05rem; }
+  .step .t p { color: var(--muted); font-size: 0.95rem; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 20px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+  ul.checks { list-style: none; margin-top: 6px; }
+  ul.checks li { padding: 8px 0 8px 30px; position: relative; font-size: 0.98rem; }
+  ul.checks li::before { content: "✓"; position: absolute; left: 0; color: var(--ok); font-weight: 800; }
+
+  blockquote {
+    margin-top: 22px; padding: 20px 24px; background: #fff; border-left: 5px solid var(--brand);
+    border-radius: 12px; font-size: 1.02rem; color: #333;
+  }
+  blockquote .q { font-weight: 600; }
+
+  .narrative {
+    background: #1a1a2e; color: #e8e8f0; border-radius: 14px; padding: 20px 22px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88rem; line-height: 1.7;
+    white-space: pre-wrap; margin-top: 16px;
+  }
+
+  .cta-band {
+    background: linear-gradient(135deg, #4A7BC4, #2f4f8f); color: #fff; border-radius: 22px;
+    padding: 38px 30px; text-align: center; margin: 10px 0 30px;
+  }
+  .cta-band h2 { color: #fff; }
+  .cta-band p { color: rgba(255,255,255,0.85); max-width: 52ch; margin: 8px auto 20px; }
+  .cta-band .btn.primary { background: #fff; color: var(--brand-dark); }
+  .cta-band .btn.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,0.5); }
+
+  footer { padding: 26px 0 50px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); margin-top: 10px; }
+  footer a { color: var(--brand); text-decoration: none; }
+  .fine { font-size: 0.8rem; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo">⌨️</div>
+      <div>
+        <div class="wordmark">SwitchMate <span>for Providers</span></div>
+        <div class="sub">Day Hab · Respite · Supported Employment · a Best Polity LLC product</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>Turn plan goals into <span class="accent">documented activities</span> — with one switch.</h1>
+    <p class="lead">SwitchMate lets your staff build a timed, goal-based activity session for any participant, run it on any device, and automatically capture the billing and narrative documentation your organization needs.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="mailto:support@bestpolity.com?subject=SwitchMate%20for%20our%20program">Request a demo</a>
+      <a class="btn ghost" href="staff.html">Staff sign-in</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="kicker">The problem</div>
+    <h2>Documentation shouldn't take longer than the activity.</h2>
+    <p style="max-width:62ch;color:var(--muted);font-size:1.05rem">Day-hab staff are asked to serve individuals with meaningful, goal-directed activities — and then write it all down for billing and progress notes. That second job is where the day gets lost. SwitchMate does the documentation while the activity happens.</p>
+  </section>
+
+  <section>
+    <div class="kicker">What SwitchMate is</div>
+    <h2>A single-switch activity system for the people you serve</h2>
+    <div class="grid3">
+      <div class="card">
+        <div class="ic">🎯</div>
+        <h3>Goal → activity mapping</h3>
+        <p>Each participant's plan goals map to real, engaging activities — AAC typing, choice-making, games — all operable with a single switch, tap, or key.</p>
+      </div>
+      <div class="card">
+        <div class="ic">⏱️</div>
+        <h3>Timed, structured sessions</h3>
+        <p>Pick goals and a duration; SwitchMate builds the session and walks staff — or the participant themselves — through it step by step.</p>
+      </div>
+      <div class="card">
+        <div class="ic">📄</div>
+        <h3>Automatic documentation</h3>
+        <p>Per-goal completion, time on task, and a generated narrative summary — ready to drop into your billing and progress notes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">How it works</div>
+    <h2>From plan to progress note in four steps</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><div class="t"><b>Add the participant and their goals</b><p>Create a profile for the person you serve and list their plan goals (making friends, learning to type, playing games…).</p></div></div>
+      <div class="step"><div class="n">2</div><div class="t"><b>Build a session</b><p>Choose the goals for this session and a length — e.g. "20 minutes." SwitchMate maps each goal to an activity and sequences them.</p></div></div>
+      <div class="step"><div class="n">3</div><div class="t"><b>Run it — staff-led or participant-led</b><p>Run it together on a shared device, or generate an invite link so the participant completes it on their own device — no sign-in needed on their end.</p></div></div>
+      <div class="step"><div class="n">4</div><div class="t"><b>Get the documentation</b><p>Completion per goal, elapsed time, and a written narrative are captured automatically for billing and progress notes.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">The output</div>
+    <h2>Narrative documentation, generated for you</h2>
+    <p style="color:var(--muted);max-width:62ch">Here's the kind of note a session produces — no extra writing required from staff:</p>
+    <div class="narrative">John participated in a 20-minute, 3-goal activity session.
+✓ Make a friend (choose a conversation topic) — 7m 12s
+✓ Practice typing my name — 6m 40s
+✓ Play a computer game — 6m 08s
+Facilitated by staff. Participant completed the session on their device.</div>
+  </section>
+
+  <section>
+    <div class="kicker">Privacy &amp; security</div>
+    <h2>Built for the trust you owe your participants</h2>
+    <div class="two-col">
+      <div>
+        <ul class="checks">
+          <li>No participant sign-in required — sessions are accessed via secure, single-use-style invite links.</li>
+          <li>Participant data is scoped per staff member and per organization.</li>
+          <li>On-device typing and word-prediction never leave the device.</li>
+          <li>Optional anonymous usage statistics can be turned off at any time.</li>
+        </ul>
+      </div>
+      <div>
+        <ul class="checks">
+          <li>Staff access is gated by an approved-email allowlist.</li>
+          <li>No ads, ever. No selling or sharing personal data.</li>
+          <li>Aligned with SwitchMate's existing privacy policy for participants.</li>
+        </ul>
+      </div>
+    </div>
+    <blockquote><span class="q">"Staff-first, by design."</span> We started with the people doing the work — simple tools that reduce documentation burden, so more of the day goes to the individuals, not the paperwork.</blockquote>
+  </section>
+
+  <div class="cta-band">
+    <h2>Ready to see it with your own participants?</h2>
+    <p>We'll walk your team through a live session — on two devices, end to end — and show you exactly what the documentation looks like.</p>
+    <div class="cta-row" style="justify-content:center">
+      <a class="btn primary" href="mailto:support@bestpolity.com?subject=SwitchMate%20demo">Request a demo</a>
+      <a class="btn ghost" href="staff.html">Staff sign-in</a>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>SwitchMate · a project of <a href="https://www.bestpolity.com">Best Polity LLC</a> · <a href="mailto:support@bestpolity.com">support@bestpolity.com</a></div>
+    <div class="fine">418 Broadway, Ste N, Albany, NY 12207 · <a href="privacy.html">Privacy</a> · <a href="index.html">Participant home</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
