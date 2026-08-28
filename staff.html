@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>SwitchMate — Staff Portal</title>
+<meta name="description" content="Day Hab worker portal for SwitchMate: invite participants, build goal-based activity sessions, and collect billing/narrative metrics.">
+<meta name="theme-color" content="#1a1a2e">
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --panel: #ffffff;
+    --ink: #1a1a2e;
+    --muted: #667;
+    --line: #e0e4ee;
+    --brand: #4A7BC4;
+    --brand-ink: #fff;
+    --ok: #43a047;
+    --warn: #c8934a;
+    --danger: #d44;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink);
+    min-height: 100dvh; line-height: 1.5;
+  }
+  .hidden { display: none !important; }
+
+  /* ---------- login / pending ---------- */
+  .gate { max-width: 440px; margin: 8vh auto 0; padding: 24px; text-align: center; }
+  .gate .logo { font-size: 3rem; margin-bottom: 8px; }
+  .gate h1 { font-size: 1.5rem; margin-bottom: 8px; }
+  .gate p { color: var(--muted); margin-bottom: 20px; }
+  .btn {
+    display: inline-block; padding: 12px 22px; border: none; border-radius: 60px;
+    background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 1rem;
+    cursor: pointer; text-decoration: none; touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.ghost { background: var(--line); color: var(--ink); }
+  .btn.small { padding: 8px 16px; font-size: 0.85rem; }
+  .btn.danger { background: var(--danger); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 14px;
+  }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+
+  /* ---------- app shell ---------- */
+  header {
+    background: #1a1a2e; color: #fff; padding: 12px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  header .brand { font-weight: 800; font-size: 1.1rem; }
+  header .who { font-size: 0.85rem; opacity: 0.8; }
+  .tabs { display: flex; gap: 8px; padding: 12px 18px 0; }
+  .tab {
+    padding: 9px 18px; border-radius: 60px; border: 1px solid var(--line);
+    background: var(--panel); cursor: pointer; font-weight: 600; color: var(--muted);
+  }
+  .tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  main { padding: 16px 18px 60px; max-width: 760px; margin: 0 auto; }
+
+  h2 { font-size: 1.2rem; margin-bottom: 12px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  input[type=text], input[type=number], select {
+    padding: 11px 14px; border: 2px solid var(--line); border-radius: 10px;
+    font-size: 1rem; width: 100%; font-family: inherit; color: var(--ink); background: #fff;
+  }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: var(--muted); }
+
+  /* client list */
+  .client-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--panel); margin-bottom: 10px; cursor: pointer;
+  }
+  .client-item:hover { border-color: var(--brand); }
+  .client-item .name { font-weight: 700; }
+  .client-item .meta { font-size: 0.82rem; color: var(--muted); }
+
+  /* goal chips */
+  .goals { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .goal-chip {
+    padding: 8px 14px; border-radius: 60px; border: 2px solid var(--line);
+    background: #fff; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .goal-chip.selected { border-color: var(--brand); background: #eaf1fb; }
+  .goal-chip .x { color: var(--danger); font-weight: 800; margin-left: 4px; }
+
+  /* runner */
+  .runner-step { text-align: center; padding: 10px 0; }
+  .runner-step .big { font-size: 3.5rem; margin-bottom: 6px; }
+  .timer { font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .progress { height: 8px; background: var(--line); border-radius: 6px; overflow: hidden; margin: 16px 0; }
+  .progress > div { height: 100%; background: var(--brand); transition: width 0.3s; }
+  .narrative {
+    white-space: pre-wrap; background: #f7f9fc; border: 1px dashed var(--line);
+    border-radius: var(--radius); padding: 14px; font-size: 0.95rem;
+  }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 60px; font-size: 0.75rem; font-weight: 700; }
+  .badge.ok { background: #e6f4e6; color: var(--ok); }
+  .badge.warn { background: #fdf1e3; color: var(--warn); }
+  .note { font-size: 0.85rem; color: var(--muted); }
+</style>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+</head>
+<body>
+
+<!-- LOGIN / PENDING GATE -->
+<div id="loginView" class="gate">
+  <div class="logo">🛠️</div>
+  <h1>SwitchMate Staff Portal</h1>
+  <p>Day Hab worker tools — invite participants, run goal-based activities, and collect billing &amp; narrative metrics.</p>
+  <button class="btn" onclick="doLogin()">Sign in with Google</button>
+  <p class="muted" style="margin-top:14px">Access is limited to approved staff accounts.</p>
+</div>
+
+<div id="pendingView" class="gate hidden">
+  <div class="logo">⏳</div>
+  <h1>Awaiting approval</h1>
+  <p>Your account (<span id="pendingEmail"></span>) isn't on the staff list yet.</p>
+  <button class="btn" id="requestBtn" onclick="requestAccess()">Request access</button>
+  <button class="btn ghost" style="margin-left:8px" onclick="doLogout()">Sign out</button>
+  <p class="muted" style="margin-top:14px">An administrator must approve your request before you can use the portal.</p>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">🛠️ SwitchMate Staff</div>
+    <div>
+      <span class="who" id="whoLabel"></span>
+      <button class="btn small ghost" style="margin-left:10px;color:#1a1a2e" onclick="doLogout()">Sign out</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-view="clients" onclick="showTab('clients')">Participants</div>
+    <div class="tab" data-view="sessions" onclick="showTab('sessions')">Sessions</div>
+  </div>
+
+  <main>
+    <!-- PARTICIPANTS -->
+    <section id="clientsView">
+      <h2>Participants</h2>
+      <div class="card">
+        <div class="field">
+          <label for="newClientName">Add / invite a participant</label>
+          <div class="row">
+            <input type="text" id="newClientName" placeholder="Participant name (e.g. John)" style="flex:1">
+            <button class="btn" onclick="addClient()">Add</button>
+          </div>
+        </div>
+        <div class="note">A participant record stores their plan goals. Staff-first: participants don't sign in.</div>
+      </div>
+      <div id="clientList"></div>
+    </section>
+
+    <!-- SESSIONS -->
+    <section id="sessionsView" class="hidden">
+      <h2>Activity Sessions</h2>
+      <div id="sessionsList" class="note">Select a participant to start a session.</div>
+    </section>
+  </main>
+</div>
+
+<!-- SESSION BUILDER + RUNNER (modal-ish overlay) -->
+<div id="builderView" class="hidden" style="position:fixed;inset:0;background:var(--bg);z-index:50;overflow:auto;padding:18px">
+  <div style="max-width:640px;margin:0 auto">
+    <button class="btn ghost small" onclick="closeBuilder()">← Back</button>
+    <h2 style="margin-top:10px">New activity session — <span id="buildClientName"></span></h2>
+
+    <div class="card">
+      <div class="field">
+        <label for="durInput">Session length (minutes)</label>
+        <input type="number" id="durInput" value="20" min="5" max="240" step="5">
+      </div>
+      <label style="font-weight:600;font-size:0.85rem;color:var(--muted)">Goals for this session</label>
+      <div class="goals" id="goalPicker"></div>
+      <div class="field" style="margin-top:12px">
+        <label for="newGoalTitle">Add a custom goal</label>
+        <div class="row">
+          <select id="newGoalType">
+            <option value="social">Making Friends (social)</option>
+            <option value="typing">Learning to Type</option>
+            <option value="games">Playing Games</option>
+            <option value="life">Life Skills</option>
+          </select>
+          <input type="text" id="newGoalTitle" placeholder="Goal title" style="flex:2">
+          <button class="btn" onclick="addGoalToClient()">Add</button>
+        </div>
+      </div>
+      <button class="btn" onclick="startSession()" style="margin-top:6px">Build &amp; start session</button>
+    </div>
+  </div>
+</div>
+
+<div id="runnerView" class="hidden" style="position:fixed;inset:0;background:var(--bg);z-index:60;overflow:auto;padding:18px">
+  <div style="max-width:640px;margin:0 auto;text-align:center">
+    <h2 id="runnerTitle"></h2>
+    <div class="progress"><div id="runnerProgress" style="width:0%"></div></div>
+    <div class="runner-step">
+      <div class="big" id="runnerIcon"></div>
+      <h1 id="runnerGoal"></h1>
+      <p class="muted" id="runnerDesc"></p>
+      <div class="timer" id="runnerTimer">--:--</div>
+      <p class="muted" id="runnerStepCount"></p>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:12px">
+      <a class="btn" id="runnerLaunch" href="#" target="_blank" rel="noopener">▶️ Launch activity</a>
+      <button class="btn ghost" onclick="completeStep()">✅ Done</button>
+      <button class="btn ghost" onclick="skipStep()">Skip</button>
+    </div>
+    <button class="btn danger" onclick="finishSessionEarly()" style="margin-top:20px">End session</button>
+  </div>
+</div>
+
+<div id="summaryView" class="hidden" style="position:fixed;inset:0;background:var(--bg);z-index:70;overflow:auto;padding:18px">
+  <div style="max-width:640px;margin:0 auto">
+    <h2>Session complete 🎉</h2>
+    <div class="card">
+      <h3 id="summaryTitle"></h3>
+      <p class="muted" id="summaryMeta"></p>
+      <div class="narrative" id="summaryNarrative"></div>
+    </div>
+    <button class="btn" onclick="closeSummary()">Done</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   SwitchMate Staff Portal — Day Hab worker tool
+   Staff-first: staff sign in (Google), invite participants, build
+   goal-based activity sessions, run them, collect billing/narrative
+   metrics. Data lives in Firestore.
+   ============================================================ */
+
+// ---------- goal -> activity catalog ----------
+const GOAL_TYPES = {
+  social: { label: 'Making Friends', icon: '🤝', activity: 'social' },
+  typing: { label: 'Learning to Type', icon: '⌨️', activity: 'typing' },
+  games:  { label: 'Playing Games', icon: '🎮', activity: 'games' },
+  life:   { label: 'Life Skills', icon: '🧭', activity: 'life' },
+};
+
+const ACTIVITIES = {
+  social: { title: 'Choice & Conversation', url: 'games/choose.html', desc: 'Two-option scanning choices that spark conversation and turn-taking.' },
+  typing: { title: 'Typing Practice', url: 'keyboard.html', desc: 'AAC keyboard with word prediction — build typing confidence.' },
+  games:  { title: 'Game Time', url: 'games/pop.html', desc: 'Pop It! balloons — a fun, rewarding motor/engagement activity.' },
+  life:   { title: 'Guided Choice', url: 'games/choose.html', desc: 'Structured choice-making for daily routines.' },
+};
+
+// ---------- state ----------
+let staff = null;          // { uid, email, name, org }
+let clients = [];
+let currentClient = null;
+let session = null;        // active session doc
+let runnerTimer = null;
+let stepIndex = 0;
+let stepStartMs = 0;
+let stepRemainingSec = 0;
+
+const $ = id => document.getElementById(id);
+const fs = firebase.firestore;
+const now = () => Date.now();
+
+// ---------- auth ----------
+onAuthChange(async (user) => {
+  if (!user) { showLogin(); return; }
+  const ref = DB.collection('staff').doc(user.uid);
+  try {
+    const doc = await ref.get();
+    if (doc.exists) {
+      staff = { uid: user.uid, email: user.email, ...doc.data() };
+      enterApp();
+    } else {
+      showPending(user);
+    }
+  } catch (e) {
+    console.error('staff lookup failed', e);
+    showPending(user);
+  }
+});
+
+function showLogin() { $('loginView').classList.remove('hidden'); $('pendingView').classList.add('hidden'); $('app').classList.add('hidden'); }
+function showPending(user) {
+  $('loginView').classList.add('hidden');
+  $('pendingView').classList.remove('hidden');
+  $('app').classList.add('hidden');
+  $('pendingEmail').textContent = user.email || user.uid;
+}
+function doLogin() { signIn(); }
+function doLogout() { signOut(); showLogin(); }
+
+async function requestAccess() {
+  const btn = $('requestBtn');
+  btn.disabled = true; btn.textContent = 'Requesting…';
+  try {
+    await DB.collection('staff_requests').doc(staff_uid()).set({
+      email: staff_email(), name: staff_name(), requestedAt: fs.FieldValue.serverTimestamp()
+    });
+    btn.textContent = 'Request sent ✓';
+  } catch (e) {
+    btn.textContent = 'Error — try again';
+    btn.disabled = false;
+  }
+}
+function staff_uid() { return firebase.auth().currentUser ? firebase.auth().currentUser.uid : 'unknown'; }
+function staff_email() { return firebase.auth().currentUser ? firebase.auth().currentUser.email : ''; }
+function staff_name() { return firebase.auth().currentUser ? (firebase.auth().currentUser.displayName || '') : ''; }
+
+// ---------- app shell ----------
+function enterApp() {
+  $('loginView').classList.add('hidden');
+  $('pendingView').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('whoLabel').textContent = (staff.name || staff.email || staff.uid);
+  showTab('clients');
+  loadClients();
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  $('clientsView').classList.toggle('hidden', name !== 'clients');
+  $('sessionsView').classList.toggle('hidden', name !== 'sessions');
+  if (name === 'sessions') loadSessions();
+}
+
+// ---------- clients ----------
+async function loadClients() {
+  if (!staff) return;
+  try {
+    const snap = await DB.collection('clients').where('staffIds', 'array-contains', staff.uid).get();
+    clients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderClients();
+  } catch (e) { console.error(e); }
+}
+
+function renderClients() {
+  const box = $('clientList');
+  if (!clients.length) {
+    box.innerHTML = '<div class="card muted">No participants yet. Add one above to get started.</div>';
+    return;
+  }
+  box.innerHTML = clients.map(c => {
+    const goals = (c.goals || []).map(g => GOAL_TYPES[g.type] ? GOAL_TYPES[g.type].icon : '🎯').join(' ') || 'no goals yet';
+    return `<div class="client-item" onclick="openBuilder('${c.id}')">
+      <div><div class="name">${esc(c.name)}</div><div class="meta">${(c.goals||[]).length} goals</div></div>
+      <div class="meta">${goals}</div>
+    </div>`;
+  }).join('');
+}
+
+async function addClient() {
+  const name = $('newClientName').value.trim();
+  if (!name) return;
+  try {
+    await DB.collection('clients').add({
+      name, staffIds: [staff.uid], org: staff.org || '',
+      goals: [], createdAt: fs.FieldValue.serverTimestamp()
+    });
+    $('newClientName').value = '';
+    loadClients();
+  } catch (e) { console.error(e); }
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------- session builder ----------
+function openBuilder(clientId) {
+  currentClient = clients.find(c => c.id === clientId);
+  if (!currentClient) return;
+  $('buildClientName').textContent = currentClient.name;
+  renderGoalPicker();
+  $('builderView').classList.remove('hidden');
+}
+function closeBuilder() { $('builderView').classList.add('hidden'); }
+
+function renderGoalPicker() {
+  const box = $('goalPicker');
+  const goals = currentClient.goals || [];
+  if (!goals.length) {
+    box.innerHTML = '<div class="note">This participant has no goals yet. Add some below.</div>';
+    return;
+  }
+  box.innerHTML = goals.map((g, i) =>
+    `<div class="goal-chip" data-i="${i}" onclick="toggleGoal(${i})">
+       ${GOAL_TYPES[g.type] ? GOAL_TYPES[g.type].icon : '🎯'} ${esc(g.title)}
+     </div>`
+  ).join('');
+}
+
+function toggleGoal(i) {
+  const chip = document.querySelector(`.goal-chip[data-i="${i}"]`);
+  if (chip) chip.classList.toggle('selected');
+}
+
+async function addGoalToClient() {
+  if (!currentClient) return;
+  const title = $('newGoalTitle').value.trim();
+  const type = $('newGoalType').value;
+  if (!title) { alert('Please enter a goal title.'); return; }
+  const goals = [...(currentClient.goals || []), { id: 'g' + now(), type, title }];
+  try {
+    await DB.collection('clients').doc(currentClient.id).update({ goals });
+    currentClient.goals = goals;
+    $('newGoalTitle').value = '';
+    renderGoalPicker();
+  } catch (e) { console.error(e); }
+}
+
+async function startSession() {
+  if (!currentClient) return;
+  const dur = parseInt($('durInput').value, 10) || 20;
+  const selected = [];
+  document.querySelectorAll('#goalPicker .goal-chip.selected').forEach(ch => {
+    const i = parseInt(ch.dataset.i, 10);
+    const g = (currentClient.goals || [])[i];
+    if (g) selected.push(g);
+  });
+  if (!selected.length) { alert('Select at least one goal for this session.'); return; }
+
+  const steps = buildPlan(dur, selected);
+  session = {
+    clientId: currentClient.id,
+    clientName: currentClient.name,
+    staffIds: [staff.uid],
+    staffName: staff.name || staff.email,
+    durationMin: dur,
+    goals: selected,
+    steps: steps.map(s => ({ ...s, log: null })),
+    status: 'running',
+    startedAt: fs.FieldValue.serverTimestamp(),
+    narrative: ''
+  };
+  try {
+    const ref = await DB.collection('sessions').add(session);
+    session.id = ref.id;
+  } catch (e) { console.error(e); }
+  stepIndex = -1;
+  $('builderView').classList.add('hidden');
+  $('runnerView').classList.remove('hidden');
+  nextStep();
+}
+
+function buildPlan(durMin, goals) {
+  const n = goals.length;
+  const per = Math.floor(durMin / n);
+  return goals.map((g, i) => ({
+    goalType: g.type,
+    goalTitle: g.title,
+    activity: ACTIVITIES[g.type] || ACTIVITIES.life,
+    minutes: (i === n - 1) ? durMin - per * (n - 1) : per
+  }));
+}
+
+// ---------- runner ----------
+function nextStep() {
+  stepIndex++;
+  const steps = session.steps;
+  if (stepIndex >= steps.length) { finishSession(); return; }
+  const s = steps[stepIndex];
+  stepStartMs = now();
+  stepRemainingSec = s.minutes * 60;
+  renderRunner(s);
+  startRunnerTimer();
+}
+
+function renderRunner(s) {
+  $('runnerTitle').textContent = session.clientName + ' — activity session';
+  $('runnerProgress').style.width = Math.round((stepIndex / session.steps.length) * 100) + '%';
+  $('runnerIcon').textContent = GOAL_TYPES[s.goalType] ? GOAL_TYPES[s.goalType].icon : '🎯';
+  $('runnerGoal').textContent = s.goalTitle;
+  $('runnerDesc').textContent = s.activity.title + ' — ' + (s.activity.desc || '');
+  $('runnerStepCount').textContent = 'Step ' + (stepIndex + 1) + ' of ' + session.steps.length + ' · ' + s.minutes + ' min';
+  $('runnerLaunch').href = s.activity.url;
+  $('runnerLaunch').style.display = s.activity.url ? '' : 'none';
+}
+
+function startRunnerTimer() {
+  stopRunnerTimer();
+  updateTimerText();
+  runnerTimer = setInterval(() => {
+    stepRemainingSec--;
+    if (stepRemainingSec <= 0) {
+      stopRunnerTimer();
+      // auto-advance, mark completed
+      completeStep(true);
+      return;
+    }
+    updateTimerText();
+  }, 1000);
+}
+function stopRunnerTimer() { if (runnerTimer) { clearInterval(runnerTimer); runnerTimer = null; } }
+function updateTimerText() {
+  const m = Math.floor(Math.max(0, stepRemainingSec) / 60);
+  const s = Math.max(0, stepRemainingSec) % 60;
+  $('runnerTimer').textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function completeStep(auto) {
+  const s = session.steps[stepIndex];
+  const actualMin = Math.round((now() - stepStartMs) / 60000);
+  s.log = { completed: true, skipped: false, actualMin };
+  persistSession();
+  nextStep();
+}
+function skipStep() {
+  const s = session.steps[stepIndex];
+  const actualMin = Math.round((now() - stepStartMs) / 60000);
+  s.log = { completed: false, skipped: true, actualMin };
+  persistSession();
+  nextStep();
+}
+
+async function persistSession() {
+  if (!session || !session.id) return;
+  try {
+    await DB.collection('sessions').doc(session.id).update({
+      steps: session.steps, narrative: buildNarrative(session)
+    });
+  } catch (e) { console.error(e); }
+}
+
+function finishSessionEarly() {
+  // mark current step incomplete and end
+  if (stepIndex >= 0 && stepIndex < session.steps.length && !session.steps[stepIndex].log) {
+    const s = session.steps[stepIndex];
+    s.log = { completed: false, skipped: false, actualMin: Math.round((now() - stepStartMs) / 60000) };
+  }
+  finishSession();
+}
+
+async function finishSession() {
+  stopRunnerTimer();
+  session.status = 'complete';
+  session.narrative = buildNarrative(session);
+  try {
+    if (session.id) {
+      await DB.collection('sessions').doc(session.id).update({
+        status: 'complete',
+        steps: session.steps,
+        narrative: session.narrative,
+        endedAt: fs.FieldValue.serverTimestamp()
+      });
+    }
+  } catch (e) { console.error(e); }
+  $('runnerView').classList.add('hidden');
+  $('summaryView').classList.remove('hidden');
+  $('summaryTitle').textContent = session.clientName + ' — ' + session.durationMin + '-minute session';
+  const done = session.steps.filter(s => s.log && s.log.completed).length;
+  $('summaryMeta').textContent = done + ' of ' + session.steps.length + ' goals completed · ' + new Date().toLocaleString();
+  $('summaryNarrative').textContent = session.narrative;
+  session = null;
+  loadSessions();
+}
+function closeSummary() { $('summaryView').classList.add('hidden'); showTab('clients'); loadClients(); }
+
+function buildNarrative(s) {
+  const total = s.durationMin;
+  const lines = s.steps.map(st => {
+    const status = st.log ? (st.log.completed ? 'completed' : (st.log.skipped ? 'skipped' : 'incomplete')) : 'not started';
+    return `${st.goalTitle} — ${st.activity.title} (${st.minutes} min, ${status})`;
+  });
+  return `${s.clientName} participated in a ${total}-minute, ${s.steps.length}-goal activity session.\n` +
+         lines.join('\n') +
+         `\nFacilitated by ${s.staffName || 'staff'}.`;
+}
+
+// ---------- sessions history ----------
+async function loadSessions() {
+  if (!staff) return;
+  const box = $('sessionsList');
+  box.innerHTML = '<div class="muted">Loading…</div>';
+  try {
+    const snap = await DB.collection('sessions')
+      .where('staffIds', 'array-contains', staff.uid)
+      .limit(50).get();
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // sort client-side (avoids needing a composite index in the console)
+    docs.sort((a, b) => {
+      const ta = a.startedAt && a.startedAt.toDate ? a.startedAt.toDate().getTime() : 0;
+      const tb = b.startedAt && b.startedAt.toDate ? b.startedAt.toDate().getTime() : 0;
+      return tb - ta;
+    });
+    if (!docs.length) {
+      box.innerHTML = '<div class="card muted">No sessions yet.</div>';
+      return;
+    }
+    box.innerHTML = docs.map(d => {
+      const done = (d.steps || []).filter(s => s.log && s.log.completed).length;
+      const total = (d.steps || []).length;
+      const when = d.startedAt && d.startedAt.toDate ? d.startedAt.toDate().toLocaleDateString() : '';
+      return `<div class="client-item" onclick="viewSession('${d.id}')" style="cursor:pointer">
+        <div><div class="name">${esc(d.clientName)}</div>
+          <div class="meta">${esc(d.narrative || '').split('\n')[0]}</div></div>
+        <span class="badge ${done === total ? 'ok' : 'warn'}">${done}/${total} goals · ${d.durationMin}m · ${when}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = '<div class="card muted">Sessions need an index on <code>startedAt</code> (see notes).</div>';
+  }
+}
+
+async function viewSession(id) {
+  try {
+    const d = await DB.collection('sessions').doc(id).get();
+    if (!d.exists) return;
+    const s = d.data();
+    $('summaryView').classList.remove('hidden');
+    $('summaryTitle').textContent = s.clientName + ' — ' + s.durationMin + '-minute session';
+    const done = (s.steps || []).filter(x => x.log && x.log.completed).length;
+    $('summaryMeta').textContent = done + ' of ' + (s.steps || []).length + ' goals completed';
+    $('summaryNarrative').textContent = s.narrative || '';
+  } catch (e) { console.error(e); }
+}
+</script>
+</body>
+</html>
