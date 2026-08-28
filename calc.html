@@ -3,7 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Calc</title>
+<title>SwitchMate — Calc</title>
+<meta name="description" content="Accessible calculator with fractions and percentages, designed for single-switch scanning.">
+<meta name="theme-color" content="#4A7BC4">
+<!-- Open Graph / Facebook / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SwitchMate">
+<meta property="og:title" content="SwitchMate — Calculator">
+<meta property="og:description" content="Accessible calculator with fractions and percentages, designed for single-switch scanning.">
+<meta property="og:url" content="https://switch.bestpolity.com/calc.html">
+<meta property="og:image" content="https://switch.bestpolity.com/rcp-switchmate-share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SwitchMate — Calculator">
+<meta name="twitter:description" content="Accessible calculator with fractions and percentages, designed for single-switch scanning.">
+<meta name="twitter:image" content="https://switch.bestpolity.com/rcp-switchmate-share.png">
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root {
     --blue: #4A7BC4;
@@ -214,6 +236,11 @@
     text-shadow: 0 1px 4px rgba(0,0,0,0.8);
   }
   .hold-status.show { opacity: 1; }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  }
 </style>
 
 <!-- Firebase SDK -->
@@ -238,7 +265,7 @@
   <div class="grid" id="grid"></div>
 </div>
 
-<button class="help-btn" onclick="showHelp()">?</button>
+<button class="help-btn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
 <div class="help-overlay" id="helpOverlay">
   <div class="help-box">
     <h2>How To Use</h2>
@@ -256,7 +283,7 @@
     <div style="text-align:center;margin-top:12px">
       <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a>
     </div>
-    <button class="help-close" onclick="hideHelp()">Got it</button>
+    <button class="help-close" onclick="hideHelp()" aria-label="Close help">Got it</button>
   </div>
 </div>
 
@@ -338,6 +365,8 @@ const state = {
   prev: null,         // previous number (number)
   op: null,           // last operator
   result: null,       // last result
+  lastOp: null,       // operator for repeat "="
+  lastOperand: null,  // operand for repeat "="
   displayExpr: '',    // expression shown
   displayResult: '0', // result shown
   calcState: 'first', // 'first' | 'op' | 'second' | 'result'
@@ -362,7 +391,7 @@ function renderGrid() {
       const cls = ['btn', btn.cls];
       if (state.scanMode === 'row' && state.currentRow === r) cls.push('scan-row');
       else if (state.scanMode === 'col' && state.selectedRow === r && state.currentCol === c) cls.push('scan-col');
-      html += `<div class="${cls.join(' ')}" onclick="press('${btn.id}')">${btn.label}</div>`;
+      html += `<div class="${cls.join(' ')}" onclick="handleInput('${btn.id}')">${btn.label}</div>`;
     }
   }
   grid.innerHTML = html;
@@ -472,6 +501,10 @@ function addDigit(d) {
     state.op = null;
     state.prev = null;
     state.displayExpr = '';
+  } else if (state.calcState === 'op') {
+    // Begin the second operand
+    state.current = d;
+    state.calcState = 'second';
   } else {
     if (state.current === '0') {
       state.current = d;
@@ -483,8 +516,19 @@ function addDigit(d) {
 }
 
 function addDecimal() {
-  if (state.current.includes('.')) return;
-  state.current += '.';
+  if (state.calcState === 'result') {
+    state.current = '0.';
+    state.calcState = 'first';
+    state.op = null;
+    state.prev = null;
+    state.displayExpr = '';
+  } else if (state.calcState === 'op') {
+    state.current = '0.';
+    state.calcState = 'second';
+  } else {
+    if (state.current.includes('.')) return;
+    state.current += '.';
+  }
   updateDisplay();
 }
 
@@ -508,6 +552,7 @@ function setOperator(op) {
     state.prev = val;
     state.op = op;
     state.calcState = 'op';
+    state.current = '0';
     state.displayExpr = prettyNum(state.prev) + ' ' + op + ' ';
     updateDisplay(false);
   } else if (state.calcState === 'op') {
@@ -524,6 +569,14 @@ function setOperator(op) {
     state.current = '0';
     state.displayExpr = prettyNum(state.result) + ' ' + op + ' ';
     updateDisplay(false);
+  } else if (state.calcState === 'result') {
+    // Continue from the last result
+    state.prev = state.result;
+    state.op = op;
+    state.calcState = 'op';
+    state.current = '0';
+    state.displayExpr = prettyNum(state.result) + ' ' + op + ' ';
+    updateDisplay(false);
   }
 }
 
@@ -534,17 +587,33 @@ function applyPercent() {
   updateDisplay();
 }
 
+function compute(a, b, op) {
+  switch (op) {
+    case '+': return a + b;
+    case '−': return a - b;
+    case '×': return a * b;
+    case '÷': return b !== 0 ? a / b : null;
+    default: return null;
+  }
+}
+
 function calculate() {
+  // Repeat last operation: "5 + 5 = =" → result + lastOperand
+  if (state.calcState === 'result') {
+    if (state.lastOp != null && state.lastOperand != null) {
+      const prev = state.result;
+      const r = compute(prev, state.lastOperand, state.lastOp);
+      state.prev = prev;
+      state.result = r;
+      state.current = r !== null ? String(r) : '0';
+      state.displayExpr = prettyNum(prev) + ' ' + state.lastOp + ' ' + prettyNum(state.lastOperand) + ' = ';
+      updateDisplay();
+    }
+    return;
+  }
+
   const val = parseFloat(state.current);
   if (isNaN(val)) return;
-  if (state.calcState === 'result') {
-    // Repeat op with result
-    if (state.op && state.result !== null) {
-      state.prev = state.result;
-    } else {
-      return;
-    }
-  }
 
   if (state.calcState === 'first') {
     // Just = on a single number — show it
@@ -555,22 +624,17 @@ function calculate() {
     return;
   }
 
-  if (state.calcState === 'op' || state.calcState === 'second') {
-    const a = state.prev;
-    const b = val;
-    let r;
-    switch (state.op) {
-      case '+': r = a + b; break;
-      case '−': r = a - b; break;
-      case '×': r = a * b; break;
-      case '÷': r = b !== 0 ? a / b : null; break;
-    }
-    state.result = r;
-    state.displayExpr = prettyNum(a) + ' ' + state.op + ' ' + prettyNum(b) + ' = ';
-    state.calcState = 'result';
-    state.current = r !== null ? String(r) : '0';
-    updateDisplay();
-  }
+  // 'op' or 'second'
+  const a = state.prev;
+  const b = val;
+  const r = compute(a, b, state.op);
+  state.result = r;
+  state.lastOp = state.op;
+  state.lastOperand = b;
+  state.displayExpr = prettyNum(a) + ' ' + state.op + ' ' + prettyNum(b) + ' = ';
+  state.calcState = 'result';
+  state.current = r !== null ? String(r) : '0';
+  updateDisplay();
 }
 
 function prettyNum(n) {

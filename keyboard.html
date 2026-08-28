@@ -3,7 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Type</title>
+<title>SwitchMate — Type</title>
+<meta name="description" content="AAC keyboard with row-column scanning and word prediction for single-switch access.">
+<meta name="theme-color" content="#4A7BC4">
+<!-- Open Graph / Facebook / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SwitchMate">
+<meta property="og:title" content="SwitchMate — AAC Keyboard">
+<meta property="og:description" content="AAC keyboard with row-column scanning and word prediction for single-switch access.">
+<meta property="og:url" content="https://switch.bestpolity.com/keyboard.html">
+<meta property="og:image" content="https://switch.bestpolity.com/rcp-switchmate-share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SwitchMate — AAC Keyboard">
+<meta name="twitter:description" content="AAC keyboard with row-column scanning and word prediction for single-switch access.">
+<meta name="twitter:image" content="https://switch.bestpolity.com/rcp-switchmate-share.png">
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root {
     --bg: #f0f2f5;
@@ -511,6 +533,11 @@
     text-shadow: 0 1px 4px rgba(0,0,0,0.8);
   }
   .hold-status.show { opacity: 1; }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  }
 </style>
 
 <!-- Firebase SDK -->
@@ -549,7 +576,7 @@
   <div class="keyboard" id="keyboard"></div>
 </div>
 
-<button class="help-btn" id="helpBtn" onclick="showHelp()">?</button>
+<button class="help-btn" id="helpBtn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
 
 <div class="help-overlay" id="helpOverlay">
   <div class="help-box">
@@ -588,7 +615,7 @@
     <div style="text-align:center;margin-top:12px">
       <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a>
     </div>
-    <button class="help-close" onclick="hideHelp()">Got it</button>
+    <button class="help-close" onclick="hideHelp()" aria-label="Close help">Got it</button>
   </div>
 </div>
 
@@ -602,7 +629,7 @@
 </div>
 
 <!-- Caregiver quick-setup (touch/mouse only — not in scan loop) -->
-<button class="cg-btn" id="cgBtn" onclick="openCaregiver()" title="Caregiver setup">🛠</button>
+<button class="cg-btn" id="cgBtn" onclick="openCaregiver()" title="Caregiver setup" aria-label="Caregiver setup">🛠</button>
 <div class="cg-overlay" id="cgOverlay">
   <div class="cg-panel">
     <h3>🛠 Caregiver Setup</h3>
@@ -803,6 +830,8 @@ function selectCurrent() {
     state.currentCol = 0;
     updateUI();
     updatePredictions();
+    // Learn on sentence boundary (space/enter) so adaptation tracks real use
+    try { Predictor.learn(state.text); } catch (e) {}
   }
 }
 
@@ -852,6 +881,9 @@ function acceptPrediction(word) {
   }
   updateText();
   updatePredictions();
+  // Learn from the completed word so personal adaptation works even
+  // when the user never presses Speak.
+  try { Predictor.learn(state.text); } catch (e) {}
 }
 
 // ============================================================
