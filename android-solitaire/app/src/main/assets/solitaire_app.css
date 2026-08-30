@@ -1,0 +1,100 @@
+:root {
+  --solitaire-app-focus: #ffd76a;
+}
+
+.solitaire-app-scan {
+  outline: 6px solid var(--solitaire-app-focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.75), 0 0 24px rgba(255, 215, 106, 0.9) !important;
+  position: relative;
+  z-index: 5;
+}
+
+.standalone-help-button {
+  color: #ffe9b3 !important;
+  font-weight: 800 !important;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.standalone-help-overlay {
+  z-index: 90 !important;
+  padding: 10px !important;
+}
+
+.standalone-help-panel {
+  width: min(660px, 100%) !important;
+  max-height: calc(100dvh - 20px) !important;
+  padding: clamp(14px, 2.6vw, 24px) !important;
+  overscroll-behavior: contain;
+}
+
+.standalone-help-panel h2 {
+  margin-bottom: 8px !important;
+  text-align: center;
+}
+
+.standalone-help-intro {
+  margin: 0 0 12px;
+  color: #454b56;
+  font-size: clamp(14px, 2.2vw, 17px);
+  line-height: 1.45;
+  text-align: center;
+}
+
+.standalone-help-card,
+.standalone-help-link {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  text-decoration: none;
+  color: #22262e;
+}
+
+.standalone-help-card strong,
+.standalone-help-link strong {
+  display: block;
+  font-size: clamp(16px, 2.5vw, 19px);
+}
+
+.standalone-help-card small,
+.standalone-help-link small {
+  line-height: 1.35;
+}
+
+.standalone-support-note {
+  margin: 14px 2px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eef8f1;
+  color: #31513e;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+#settingsPanel .solitaire-app-scan,
+#standaloneHelpPanel .solitaire-app-scan {
+  transform: scale(1.01);
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .standalone-help-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+    align-items: start;
+  }
+
+  .standalone-help-panel h2,
+  .standalone-help-intro,
+  .standalone-support-note,
+  #standaloneHelpClose {
+    grid-column: 1 / -1;
+  }
+
+  .standalone-help-card,
+  .standalone-help-link {
+    margin: 3px 0;
+  }
+}
