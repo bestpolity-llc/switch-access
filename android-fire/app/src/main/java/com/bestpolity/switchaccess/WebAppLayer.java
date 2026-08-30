@@ -7,10 +7,10 @@ import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import java.io.ByteArrayInputStream;
@@ -26,7 +26,6 @@ final class WebAppLayer {
     private static final String TAG = "SwitchAccess";
     private static final String CSS_ASSET = "switch_app.css";
     private static final String BRIDGE_ASSET = "switch_app_bridge.js.gz.b64";
-    private static final String PATCH_ASSET = "switch_app_patch.js";
 
     interface Listener {
         void onLoadStarted();
@@ -95,14 +94,9 @@ final class WebAppLayer {
             }
 
             @Override
-            public void onReceivedHttpError(
-                WebView view,
-                WebResourceRequest request,
-                WebResourceResponse response
-            ) {
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
                 super.onReceivedHttpError(view, request, response);
-                if (request != null && request.isForMainFrame() &&
-                    response != null && response.getStatusCode() >= 400) {
+                if (request != null && request.isForMainFrame() && response != null && response.getStatusCode() >= 400) {
                     mainFrameFailed = true;
                     listener.onMainFrameError("Server error " + response.getStatusCode());
                 }
@@ -110,19 +104,12 @@ final class WebAppLayer {
 
             @SuppressWarnings("deprecation")
             @Override
-            public void onReceivedError(
-                WebView view,
-                int errorCode,
-                String description,
-                String failingUrl
-            ) {
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
                 String current = view.getUrl();
                 if (current == null || failingUrl == null || current.equals(failingUrl)) {
                     mainFrameFailed = true;
-                    listener.onMainFrameError(
-                        description == null ? "Network error" : description
-                    );
+                    listener.onMainFrameError(description == null ? "Network error" : description);
                 }
             }
         });
@@ -192,7 +179,6 @@ final class WebAppLayer {
         try {
             String css = readAsset(context, CSS_ASSET);
             String bridge = readCompressedBase64Asset(context, BRIDGE_ASSET);
-            String patch = readAsset(context, PATCH_ASSET);
             String encodedCss = Base64.encodeToString(
                 css.getBytes(StandardCharsets.UTF_8),
                 Base64.NO_WRAP
@@ -204,14 +190,11 @@ final class WebAppLayer {
                     "s.textContent=atob('" + encodedCss + "');" +
                     "(document.head||document.documentElement).appendChild(s);" +
                 "})();";
-
             webView.evaluateJavascript(injectCss, ignored ->
-                webView.evaluateJavascript(bridge, ignoredBridge ->
-                    webView.evaluateJavascript(patch, ignoredPatch -> {
-                        setMode(webView, modeName);
-                        setScanAudio(webView, scanAudioEnabled);
-                    })
-                )
+                webView.evaluateJavascript(bridge, ignoredBridge -> {
+                    setMode(webView, modeName);
+                    setScanAudio(webView, scanAudioEnabled);
+                })
             );
         } catch (IOException error) {
             Log.e(TAG, "Could not inject app accessibility layer", error);
@@ -228,12 +211,10 @@ final class WebAppLayer {
         }
     }
 
-    private static String readCompressedBase64Asset(Context context, String name)
-        throws IOException {
+    private static String readCompressedBase64Asset(Context context, String name) throws IOException {
         String encoded = readAsset(context, name).replaceAll("\\s+", "");
         byte[] compressed = Base64.decode(encoded, Base64.DEFAULT);
-        try (GZIPInputStream gzip =
-                 new GZIPInputStream(new ByteArrayInputStream(compressed))) {
+        try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(compressed))) {
             return readUtf8(gzip);
         }
     }
