@@ -27,14 +27,14 @@ In either touch-switch mode:
 
 ## App accessibility layer
 
-The files in `app/src/main/assets/` are injected after each page loads. They provide:
+The files in `app/src/main/assets/` are injected after each SwitchMate page loads. They provide:
 
 - A consistent scanner for the hub and document pages
 - Debounced keyboard/external-switch input
 - Modal and dialog scanning
 - In-app Back and Home scan actions
 - AAC scanning for predictions, every keyboard row, Backspace, Space, Enter, Settings, layers, Speak, Clear, Help, and Caregiver Setup
-- Safe AAC punctuation buttons, including apostrophe, quotation mark, and backslash
+- Safe AAC punctuation buttons, including apostrophe, quotation mark, backtick, and backslash
 - Responsive AAC and calculator layouts that fit reduced-height and landscape Fire-tablet viewports
 - Accessible names, roles, visible focus treatment, and minimum direct-touch target sizes
 - A repair for Pick so direct choices work and a switch press restarts after results
@@ -48,13 +48,16 @@ The native shell also includes:
 - A visible network-error screen with switch/tap retry
 - Same-window handling for links that request a new tab
 - WebView cleanup and cookie flushing across lifecycle changes
+- Accessibility-layer injection restricted to `switch.bestpolity.com`
 
 ## Testing
 
-Run the static and browser-fixture tests locally from the repository root:
+Run the static and build checks locally from the repository root:
 
 ```bash
-node --check android-fire/app/src/main/assets/switch_app_bridge.js
+base64 --decode android-fire/app/src/main/assets/switch_app_bridge.js.gz.b64 \
+  | gzip --decompress > /tmp/switch_app_bridge.js
+node --check /tmp/switch_app_bridge.js
 gradle -p android-fire :app:lintDebug :app:assembleDebug
 ```
 
