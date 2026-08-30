@@ -2,6 +2,7 @@ package com.bestpolity.switchaccess;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
@@ -65,7 +66,9 @@ final class WebAppLayer {
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setLongClickable(false);
         webView.setOnLongClickListener(view -> true);
-        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true);
+        boolean debuggable =
+            (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        WebView.setWebContentsDebuggingEnabled(debuggable);
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
