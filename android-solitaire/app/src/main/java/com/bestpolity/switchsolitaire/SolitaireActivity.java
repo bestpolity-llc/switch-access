@@ -19,6 +19,8 @@ public class SolitaireActivity extends MainActivity {
 
     private static final String HELP_TAG =
         "switch-solitaire-native-help";
+    private static final String HINT_TAG =
+        "switch-solitaire-mode-hint";
 
     private int toolbarAttempts;
 
@@ -53,14 +55,39 @@ public class SolitaireActivity extends MainActivity {
         modeButton.setTextSize(15f);
         modeButton.setSingleLine(true);
         modeButton.setGravity(Gravity.CENTER);
-        modeButton.setPadding(dp(10), 0, dp(10), 0);
+        modeButton.setPadding(dp(12), 0, dp(12), 0);
 
         ViewGroup.LayoutParams current = modeButton.getLayoutParams();
-        current.width = dp(138);
+        current.width = dp(160);
         current.height = dp(44);
         modeButton.setLayoutParams(current);
 
+        TextView hint = findTaggedTextView(toolbar, HINT_TAG);
+        if (hint == null) {
+            hint = new TextView(this);
+            hint.setTag(HINT_TAG);
+            hint.setText("tap 4 times to change switch mode");
+            hint.setTextColor(0xFFDDDDDD);
+            hint.setTextSize(10f);
+            hint.setSingleLine(true);
+            hint.setGravity(Gravity.CENTER_VERTICAL);
+            hint.setPadding(dp(7), 0, dp(7), 0);
+            hint.setContentDescription(
+                "Tap Switch Mode four times to change switch mode."
+            );
+
+            LinearLayout.LayoutParams hintParams =
+                new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    dp(44)
+                );
+            hintParams.setMargins(dp(1), 0, dp(2), 0);
+            toolbar.addView(hint, 1, hintParams);
+        }
+
         if (findTaggedChild(toolbar, HELP_TAG) != null) {
+            toolbar.requestLayout();
+            toolbar.bringToFront();
             return true;
         }
 
@@ -156,6 +183,11 @@ public class SolitaireActivity extends MainActivity {
             if (tag.equals(child.getTag())) return child;
         }
         return null;
+    }
+
+    private TextView findTaggedTextView(ViewGroup group, String tag) {
+        View found = findTaggedChild(group, tag);
+        return found instanceof TextView ? (TextView) found : null;
     }
 
     private WebView findWebView(View view) {
