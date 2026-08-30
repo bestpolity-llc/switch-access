@@ -10,6 +10,11 @@
   z-index: 5;
 }
 
+/* Help lives in the native top toolbar in the Fire app. */
+#standaloneHelpButton {
+  display: none !important;
+}
+
 .standalone-help-button {
   color: #ffe9b3 !important;
   font-weight: 800 !important;
