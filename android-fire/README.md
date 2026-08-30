@@ -1,34 +1,69 @@
 # Switch Access for Fire OS
 
-This Android project wraps the existing Switch Access web application for Amazon Fire tablets.
+This Android project packages the SwitchMate web application as a Fire OS app and adds an app-only single-switch accessibility layer.
 
-## Development
+## Open and run
 
-1. Open the `android-fire` directory in Android Studio.
-2. Allow Gradle sync to complete.
+1. In Android Studio, open the `android-fire` directory—not the repository root.
+2. Wait for Gradle sync to finish.
 3. Enable Developer Options and USB debugging on the Fire tablet.
-4. Connect the tablet by USB and select it in Android Studio's device selector.
-5. Run the `app` configuration.
+4. Connect the tablet, select it in Android Studio, and run the `app` configuration.
 
-The development build loads:
+The development build loads `https://switch.bestpolity.com/` inside a hardened full-screen WebView.
 
-`https://switch.bestpolity.com/`
+## Switch modes
 
-## Current scope
+Tap the floating **⚡** icon four times quickly to cycle modes. The selected mode is remembered.
 
-- Fire OS / Android launcher app
-- Full-screen WebView
-- JavaScript and DOM storage enabled
-- Cookie support for web authentication/session state
-- Back-button web navigation
-- API 22+ compatibility
+- **Full-screen switch:** a quick press anywhere activates the current scan item.
+- **Bottom 25% switch:** the website is resized into the top 75%; the bottom quarter becomes a dedicated switch without covering controls.
+- **External — TBD:** the touch switch is hidden. Keyboard-style external switches can still send a single key press while external-device setup is developed.
+
+In either touch-switch mode:
+
+- Quick press: select / activate
+- Hold 2 seconds: back or cancel
+- Hold 10 seconds: SwitchMate home
+
+## App accessibility layer
+
+The files in `app/src/main/assets/` are injected after each page loads. They provide:
+
+- A consistent scanner for the hub and document pages
+- Debounced keyboard/external-switch input
+- Modal and dialog scanning
+- In-app Back and Home scan actions
+- AAC scanning for predictions, every keyboard row, Backspace, Space, Enter, Settings, layers, Speak, Clear, Help, and Caregiver Setup
+- Safe AAC punctuation buttons, including apostrophe, quotation mark, and backslash
+- Responsive AAC and calculator layouts that fit reduced-height and landscape Fire-tablet viewports
+- Accessible names, roles, visible focus treatment, and minimum direct-touch target sizes
+- A repair for Pick so direct choices work and a switch press restarts after results
+
+## Reliability
+
+The native shell also includes:
+
 - No Google Play Services dependency
+- JavaScript, DOM storage, cookies, and Firebase web-session support
+- A visible network-error screen with switch/tap retry
+- Same-window handling for links that request a new tab
+- WebView cleanup and cookie flushing across lifecycle changes
 
-## Before Amazon Appstore submission
+## Testing
 
-- Test sign-in/Firebase flows on physical Fire hardware
-- Verify all games and switch-input workflows
-- Add production launcher/store artwork
-- Add offline/error-state handling
-- Generate and securely retain a release signing key
-- Build a signed release APK or App Bundle as accepted by Amazon Developer Console
+Run the static and browser-fixture tests locally from the repository root:
+
+```bash
+node --check android-fire/app/src/main/assets/switch_app_bridge.js
+gradle -p android-fire :app:lintDebug :app:assembleDebug
+```
+
+Use `QA.md` for the physical Fire-tablet pass. A successful build does not replace hands-on switch testing.
+
+## Release work still required
+
+- Complete the physical-device QA matrix
+- Verify sign-in/Firebase behavior on the target Fire OS versions
+- Add final Amazon Appstore screenshots and listing copy
+- Generate and securely retain the release signing key
+- Build and test the signed release artifact
