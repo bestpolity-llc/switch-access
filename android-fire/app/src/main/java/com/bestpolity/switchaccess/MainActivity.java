@@ -16,6 +16,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
@@ -72,6 +73,7 @@ public class MainActivity extends Activity implements WebAppLayer.Listener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
 
@@ -128,8 +130,9 @@ public class MainActivity extends Activity implements WebAppLayer.Listener {
         });
         applySwitchMode(false);
 
-        if (savedInstanceState == null) webView.loadUrl(WebAppLayer.HOME_URL);
-        else webView.restoreState(savedInstanceState);
+        if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
+            webView.loadUrl(WebAppLayer.HOME_URL);
+        }
         webView.requestFocus(View.FOCUS_DOWN);
         hideSystemUi();
     }
