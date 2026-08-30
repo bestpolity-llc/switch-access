@@ -1,15 +1,7 @@
-name: Fire OS app CI
+name: Fire OS app verification
 
 on:
-  push:
-    branches: [fire-os-app]
-    paths:
-      - "android-fire/**"
-      - ".github/workflows/fire-os-ci.yml"
-  pull_request:
-    paths:
-      - "android-fire/**"
-      - ".github/workflows/fire-os-ci.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
