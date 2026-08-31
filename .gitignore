@@ -1,0 +1,17 @@
+# Android/Gradle build outputs
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+*.idsig
+local.properties
+
+# Node dependencies used by the local Bubblewrap CLI
+node_modules/
+
+# Signing credentials must never be committed
+*.keystore
+*.jks
+*.p12
+*.env

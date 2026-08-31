@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bestpolity.switchmate",
+      "sha256_cert_fingerprints": [
+        "C8:72:71:6E:B7:4E:A9:EF:34:B1:12:04:EA:03:62:A7:50:25:7B:9D:AC:D3:BC:DA:A3:52:34:D9:BB:BF:FF:FC"
+      ]
+    }
+  }
+]
