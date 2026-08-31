@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace = "com.bestpolity.switchsolitaire"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.bestpolity.switchsolitaire"
         minSdk = 22
-        targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        targetSdk = 36
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     buildFeatures {
