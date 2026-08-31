@@ -2,6 +2,9 @@
 .gradle/
 build/
 app/build/
+android-solitaire/.gradle/
+android-solitaire/build/
+android-solitaire/app/build/
 *.apk
 *.aab
 *.idsig

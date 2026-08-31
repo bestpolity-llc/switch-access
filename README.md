@@ -50,6 +50,16 @@ For future releases, increment both `appVersionName` and `appVersionCode` in
 `twa-manifest.json`, run `bubblewrap update --skipVersionUpgrade`, and build with
 the same upload key.
 
+### Solitaire-only Play app
+
+A separate TWA project in `android-solitaire/` opens only
+`/games/solitaire.html`.
+
+- App name: SwitchMate Solitaire
+- Package ID: `com.bestpolity.switchmatesolitaire`
+- Version: `1.0.0` (`versionCode` 1)
+- Its upload key is separate and remains outside this repository.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
