@@ -13,6 +13,9 @@ local.properties
 # Node dependencies used by the local Bubblewrap CLI
 node_modules/
 
+# Python test cache
+__pycache__/
+
 # Signing credentials must never be committed
 *.keystore
 *.jks
