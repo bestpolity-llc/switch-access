@@ -23,7 +23,7 @@ plugins {
 def twaManifest = [
     applicationId: 'com.bestpolity.switchmatesolitaire',
     hostName: 'switch.bestpolity.com', // The domain being opened in the TWA.
-    launchUrl: '/games/solitaire.html', // The start path for the TWA. Must be relative to the domain.
+    launchUrl: '/games/solitaire.html?app=1', // The start path for the TWA. Must be relative to the domain.
     name: 'SwitchMate Solitaire', // The application name.
     launcherName: 'Solitaire', // The name shown on the Android Launcher.
     themeColor: '#1D5C37', // The color used for the status bar.
@@ -57,7 +57,7 @@ android {
         applicationId "com.bestpolity.switchmatesolitaire"
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 1
+        versionCode 2
         versionName "1.0.0"
 
         // The name for the application

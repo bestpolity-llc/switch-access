@@ -279,6 +279,7 @@
 
 <script>
 "use strict";
+const IS_SOLITAIRE_APP = new URLSearchParams(location.search).get("app") === "1";
 /* ============================================================
    SWITCH SOLITAIRE — real Klondike, one switch, zero errors
    Vanilla port of the React original. SwitchMate conventions:
@@ -785,6 +786,9 @@ function closeSettings() {
   render(); startScan();
 }
 function syncSettingsUI() {
+  if (IS_SOLITAIRE_APP) {
+    $("optHome").hidden = true;
+  }
   $("optEasy").className = "opt" + (settings.mode === "easy" ? " on" : "");
   $("optScan").className = "opt" + (settings.mode === "scan" ? " on" : "");
   $("speedSetting").style.display = settings.mode === "scan" ? "" : "none";
@@ -810,7 +814,9 @@ $("optNewGame").addEventListener("click", () => {
   closeSettings();
 });
 $("optBack").addEventListener("click", closeSettings);
-$("optHome").addEventListener("click", () => { window.location.href = "../index.html"; });
+$("optHome").addEventListener("click", () => {
+  if (!IS_SOLITAIRE_APP) window.location.href = "../index.html";
+});
 
 /* ---------- SwitchMate hold semantics: tap=play, 2s=settings, 10s=hub ---------- */
 let touchStart = 0, holdInt = null, holdFired10 = false, holdFired2 = false;
@@ -823,7 +829,7 @@ document.documentElement.addEventListener("touchstart", function(e) {
   holdInt = setInterval(() => {
     const elapsed = (Date.now() - touchStart) / 1000;
     $("holdFill").style.width = Math.min(100, (elapsed / 10) * 100) + "%";
-    if (elapsed >= 10 && !holdFired10) {
+    if (!IS_SOLITAIRE_APP && elapsed >= 10 && !holdFired10) {
       holdFired10 = true; clearInterval(holdInt); holdInt = null;
       $("holdFill").style.width = "100%";
       setTimeout(() => { window.location.href = "../index.html"; }, 300);

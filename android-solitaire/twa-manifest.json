@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#1D5C37",
   "enableNotifications": false,
-  "startUrl": "/games/solitaire.html",
+  "startUrl": "/games/solitaire.html?app=1",
   "iconUrl": "https://switch.bestpolity.com/icon-512.png",
   "maskableIconUrl": "https://switch.bestpolity.com/icon-512.png",
   "splashScreenFadeOutDuration": 300,
@@ -21,7 +21,7 @@
     "alias": "switchmate-solitaire-upload"
   },
   "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://switch.bestpolity.com/manifest.webmanifest",
