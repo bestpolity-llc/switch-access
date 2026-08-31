@@ -15,7 +15,8 @@
       "namespace": "android_app",
       "package_name": "com.bestpolity.switchmatesolitaire",
       "sha256_cert_fingerprints": [
-        "8E:EB:EE:14:A6:5D:9D:62:D9:23:C8:5E:D6:AD:A6:4D:3D:6F:B6:80:66:3F:BB:0F:59:2B:E9:06:A6:38:ED:AA"
+        "8E:EB:EE:14:A6:5D:9D:62:D9:23:C8:5E:D6:AD:A6:4D:3D:6F:B6:80:66:3F:BB:0F:59:2B:E9:06:A6:38:ED:AA",
+        "57:AB:4E:64:DE:08:61:EB:C1:81:82:CA:E6:5B:64:68:C3:46:4B:53:5C:53:CE:36:5F:2D:D9:30:92:F2:7B:39"
       ]
     }
   }
