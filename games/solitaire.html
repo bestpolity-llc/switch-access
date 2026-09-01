@@ -188,7 +188,12 @@
 
 /* --- Standalone Android accessibility controls --- */
 body:not(.solitaire-app) .app-only { display: none !important; }
-.solitaire-app .table { top: 48px; bottom: 58px; }
+.solitaire-app .table { top: 48px; bottom: 0; }
+.solitaire-app.bottom-switch .table { bottom: 25vh; }
+.solitaire-app.bottom-switch .app-switch-btn { height: 25vh; }
+.solitaire-app:not(.bottom-switch) .app-switch-btn {
+  inset: 48px 0 0 0; height: auto; opacity: 0; z-index: 65;
+}
 .app-toolbar {
   position: fixed; z-index: 70; inset: 0 0 auto 0; height: 48px;
   display: flex; align-items: center; gap: 10px; padding: 0 10px;
@@ -319,7 +324,9 @@ body:not(.solitaire-app) .app-only { display: none !important; }
 <script>
 "use strict";
 const IS_SOLITAIRE_APP = new URLSearchParams(location.search).get("app") === "1";
+let switchZone = localStorage.getItem("switchaac_sol_zone") === "bottom" ? "bottom" : "fullscreen";
 document.body.classList.toggle("solitaire-app", IS_SOLITAIRE_APP);
+document.body.classList.toggle("bottom-switch", switchZone === "bottom");
 /* ============================================================
    SWITCH SOLITAIRE — real Klondike, one switch, zero errors
    Vanilla port of the React original. SwitchMate conventions:
@@ -840,7 +847,7 @@ function syncSettingsUI() {
   $("optVoice").className = "opt" + (settings.voice ? " on" : "");
   $("optVoice").textContent = "Voice " + (settings.voice ? "On" : "Off");
   if (IS_SOLITAIRE_APP) {
-    $("appModeLabel").textContent = settings.mode === "easy" ? "Switch Mode" : "Choose Moves";
+    $("appModeLabel").textContent = switchZone === "fullscreen" ? "Full Screen" : "Bottom 25%";
     $("appSoundBtn").textContent = settings.sound ? "🔊" : "🔇";
     $("appSoundBtn").setAttribute("aria-label", settings.sound ? "Turn sound off" : "Turn sound on");
   }
@@ -871,8 +878,10 @@ if (IS_SOLITAIRE_APP) {
     modeTapTimer = setTimeout(() => { modeTapCount = 0; }, 1500);
     if (modeTapCount === 4) {
       modeTapCount = 0;
-      settings.mode = settings.mode === "easy" ? "scan" : "easy";
-      saveSettings(); syncSettingsUI(); render(); startScan();
+      switchZone = switchZone === "fullscreen" ? "bottom" : "fullscreen";
+      localStorage.setItem("switchaac_sol_zone", switchZone);
+      document.body.classList.toggle("bottom-switch", switchZone === "bottom");
+      syncSettingsUI();
     }
   });
   $("appSoundBtn").addEventListener("click", e => {
@@ -888,7 +897,7 @@ if (IS_SOLITAIRE_APP) {
 let touchStart = 0, holdInt = null, holdFired10 = false, holdFired2 = false;
 document.documentElement.addEventListener("touchstart", function(e) {
   if (touchStart) return;
-  if (e.target.closest && e.target.closest(".panel, .gear")) return;  // real controls stay tappable
+  if (e.target.closest && e.target.closest(".app-toolbar, .panel, .gear")) return;  // real controls stay tappable
   e.preventDefault();
   touchStart = Date.now(); holdFired10 = holdFired2 = false;
   $("holdFill").style.width = "0%";
@@ -938,7 +947,7 @@ document.addEventListener("keydown", e => {
 });
 document.addEventListener("pointerdown", e => {
   if (e.pointerType === "touch") return;  // handled by touch handlers
-  if (e.target.closest && e.target.closest(".panel, .gear")) return;
+  if (e.target.closest && e.target.closest(".app-toolbar, .panel, .gear")) return;
   onSwitch();
 });
 
