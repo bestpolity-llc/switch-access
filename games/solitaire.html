@@ -186,6 +186,37 @@
 .hold-status { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 1rem; color: #ffd76a; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s; text-align: center; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
 .hold-status.show { opacity: 1; }
 
+/* --- Standalone Android accessibility controls --- */
+body:not(.solitaire-app) .app-only { display: none !important; }
+.solitaire-app .table { top: 48px; bottom: 58px; }
+.app-toolbar {
+  position: fixed; z-index: 70; inset: 0 0 auto 0; height: 48px;
+  display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  background: #101412; color: #fff; font-family: 'Fredoka', system-ui, sans-serif;
+  box-sizing: border-box;
+}
+.app-mode-btn {
+  border: 1px solid #667268; border-radius: 18px; padding: 7px 12px;
+  background: #294b38; color: #fff; font: 600 14px 'Fredoka', system-ui, sans-serif; white-space: nowrap;
+}
+.app-mode-btn .bolt { color: #ffd76a; margin-right: 5px; }
+.app-toolbar-hint { flex: 1; color: #c9cfcb; font-size: 12px; text-align: center; }
+.app-round-btn {
+  width: 34px; height: 34px; border: 0; border-radius: 50%;
+  background: #4a7bc4; color: #fff; font-size: 18px; font-weight: 700;
+}
+.app-switch-btn {
+  position: fixed; z-index: 70; inset: auto 0 0 0; height: 58px;
+  border: 0; border-top: 3px solid #ffd76a; background: #173e28; color: #fff;
+  font: 800 24px 'Fredoka', system-ui, sans-serif; letter-spacing: 1px;
+}
+.app-switch-dot { margin-right: 10px; }
+@media (max-width: 520px) {
+  .app-toolbar { gap: 5px; padding: 0 6px; }
+  .app-mode-btn { padding: 7px 9px; font-size: 12px; }
+  .app-toolbar-hint { font-size: 10px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-glow, .dest-glow, .fx-pulse, .win-card { animation: none; }
   .confetto { display: none; }
@@ -199,6 +230,12 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+<div class="app-toolbar app-only" id="appToolbar">
+  <button class="app-mode-btn" id="switchModeBtn" type="button"><span class="bolt">⚡</span><span id="appModeLabel">Switch Mode</span></button>
+  <span class="app-toolbar-hint">tap 4 times to change switch mode</span>
+  <button class="app-round-btn" id="appSoundBtn" type="button" aria-label="Toggle sound">🔊</button>
+  <button class="app-round-btn" id="appHelpBtn" type="button" aria-label="Open help and settings">?</button>
+</div>
 <div class="table" id="table">
   <header class="bar">
     <div class="title">🂡 Switch Solitaire</div>
@@ -226,6 +263,8 @@
     <div class="dots" id="dots" hidden></div>
   </footer>
 </div>
+
+<button class="app-switch-btn app-only" id="appSwitchBtn" type="button"><span class="app-switch-dot">●</span><span>SWITCH</span></button>
 
 <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
 
@@ -280,6 +319,7 @@
 <script>
 "use strict";
 const IS_SOLITAIRE_APP = new URLSearchParams(location.search).get("app") === "1";
+document.body.classList.toggle("solitaire-app", IS_SOLITAIRE_APP);
 /* ============================================================
    SWITCH SOLITAIRE — real Klondike, one switch, zero errors
    Vanilla port of the React original. SwitchMate conventions:
@@ -799,6 +839,11 @@ function syncSettingsUI() {
   $("optSound").textContent = "Sounds " + (settings.sound ? "On" : "Off");
   $("optVoice").className = "opt" + (settings.voice ? " on" : "");
   $("optVoice").textContent = "Voice " + (settings.voice ? "On" : "Off");
+  if (IS_SOLITAIRE_APP) {
+    $("appModeLabel").textContent = settings.mode === "easy" ? "Switch Mode" : "Choose Moves";
+    $("appSoundBtn").textContent = settings.sound ? "🔊" : "🔇";
+    $("appSoundBtn").setAttribute("aria-label", settings.sound ? "Turn sound off" : "Turn sound on");
+  }
 }
 $("gearBtn").addEventListener("click", e => { e.stopPropagation(); openSettings(); });
 $("optEasy").addEventListener("click", () => { settings.mode = "easy"; saveSettings(); syncSettingsUI(); });
@@ -817,6 +862,27 @@ $("optBack").addEventListener("click", closeSettings);
 $("optHome").addEventListener("click", () => {
   if (!IS_SOLITAIRE_APP) window.location.href = "../index.html";
 });
+if (IS_SOLITAIRE_APP) {
+  let modeTapCount = 0, modeTapTimer = null;
+  $("switchModeBtn").addEventListener("click", e => {
+    e.stopPropagation();
+    modeTapCount += 1;
+    clearTimeout(modeTapTimer);
+    modeTapTimer = setTimeout(() => { modeTapCount = 0; }, 1500);
+    if (modeTapCount === 4) {
+      modeTapCount = 0;
+      settings.mode = settings.mode === "easy" ? "scan" : "easy";
+      saveSettings(); syncSettingsUI(); render(); startScan();
+    }
+  });
+  $("appSoundBtn").addEventListener("click", e => {
+    e.stopPropagation();
+    settings.sound = !settings.sound;
+    saveSettings(); syncSettingsUI();
+  });
+  $("appHelpBtn").addEventListener("click", openSettings);
+  $("appSwitchBtn").addEventListener("click", onSwitch);
+}
 
 /* ---------- SwitchMate hold semantics: tap=play, 2s=settings, 10s=hub ---------- */
 let touchStart = 0, holdInt = null, holdFired10 = false, holdFired2 = false;
