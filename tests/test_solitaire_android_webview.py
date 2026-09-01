@@ -15,7 +15,8 @@ class SolitaireAndroidWebViewTests(unittest.TestCase):
 
     def test_webview_release_has_new_version_code(self):
         gradle = (PROJECT / "app/build.gradle").read_text()
-        self.assertIn("versionCode 3", gradle)
+        self.assertIn("versionCode 4", gradle)
+        self.assertIn("versionName '1.0.2'", gradle)
 
 
 if __name__ == "__main__":
