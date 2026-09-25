@@ -114,13 +114,12 @@ function highlight() {
   }
   $("#padLabel").textContent = command.label;
   $("#scanStatus").textContent = manual ? "Keyboard navigation: Tab to a control, then Space or Enter." : "Highlighted: " + command.label;
-  if (!manual) buttons[scanIndex]?.scrollIntoView({ block: "nearest", behavior: "instant" });
 }
 function utilityCommands() {
   return [
     { label: "Help", run: () => openPanel("help") },
     { label: "Settings", run: () => openPanel("settings") },
-    { label: "Replay", run: () => { narrate(); resetScan(); } },
+    { label: "Replay", run: () => { resetScan(currentId === "choose_stars" ? 1 : 0); narrate(); } },
     { label: "Restart", run: () => openPanel("restart") },
     { label: "Exit", run: () => openPanel("exit") }
   ];
@@ -225,16 +224,16 @@ document.addEventListener("pointerdown", event => {
   pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, index: selected(event.target), version: generation };
 });
 document.addEventListener("pointermove", event => {
-  if (pointer?.id === event.pointerId && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 15) pointer = null;
+  if (pointer?.id === event.pointerId && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 15) pointer.cancelled = true;
 });
 document.addEventListener("pointerup", event => {
   if (pointer?.id !== event.pointerId) return;
   const press = pointer;
   pointer = null;
   suppressClickUntil = performance.now() + 700;
-  activate(press.index, press.version);
+  if (!press.cancelled) activate(press.index, press.version);
 });
-document.addEventListener("pointercancel", () => { pointer = null; });
+document.addEventListener("pointercancel", () => { pointer = null; suppressClickUntil = performance.now() + 700; });
 document.addEventListener("click", event => {
   if (performance.now() < suppressClickUntil) { event.preventDefault(); return; }
   // Native / assistive-technology clicks have no pointer stream.

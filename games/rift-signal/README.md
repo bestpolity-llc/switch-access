@@ -22,6 +22,7 @@ Settings use the isolated localStorage key switchmate.rift-signal.settings.v1, v
 
 Run from repository root:
 ```sh
+node tests/rift-signal-controller.mjs
 npm install --prefix work/rift-tests playwright@1.51.1
 work/rift-tests/node_modules/.bin/playwright install --with-deps chromium
 node tests/rift-signal.mjs
@@ -30,3 +31,10 @@ node tests/rift-signal.mjs
 GitHub Actions runs the same checks and retains desktop/mobile screenshots. Tests cover the mission graph and both paths at 1440×900 and 390×844, all input modes, scannable utility/settings access, repeat protection, restart/exit cancellation, settings persistence and failure, text layout, and unavailable/error/success browser-speech states.
 
 Physical USB/Bluetooth switch hardware, iOS Safari, Android/TWA, actual installed speech voices/audio output, screen readers, and device rotation still require device testing. Automated mobile viewports are not physical-device validation.
+
+### Results from this implementation session
+
+- Passed: 12 deterministic controller scenarios executed against app.js in a V8 runtime with simulated DOM, input events and timers. Both story branches, all input modes, scan-only help/settings, duplicate keys/clicks, restart/exit, unavailable/error/delayed speech, Tab navigation, panel/visibility pausing, and storage errors were exercised. This is not a rendered-browser test.
+- Passed: mission graph traversal, JavaScript syntax checks, unchanged mission data, bundled artwork provenance, and preservation of the hub's eight prior tile destinations.
+- Blocked: local execution fails before commands launch with `error building bubblewrap command: mountinfo path is not absolute`. Local preview file creation also failed.
+- Blocked: Chromium desktop/mobile suite did not start. GitHub Actions run 36129099183 reports “The job was not started because your account is locked due to a billing issue.” No rendered screenshots or desktop/mobile browser pass is claimed. Run the committed browser suite once a runner is available; retain the PR as draft until then.

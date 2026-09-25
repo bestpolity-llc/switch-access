@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'games/rift-signal/**'
-      - 'tests/rift-signal.mjs'
+      - 'tests/rift-signal*.mjs'
       - '.github/workflows/rift-signal.yml'
       - 'index.html'
   push:
@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: node tests/rift-signal-controller.mjs
       - run: npm install --prefix work/rift-tests playwright@1.51.1
       - run: work/rift-tests/node_modules/.bin/playwright install --with-deps chromium
       - run: node tests/rift-signal.mjs

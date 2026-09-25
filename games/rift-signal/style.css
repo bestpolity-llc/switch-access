@@ -18,3 +18,8 @@ body[data-mode="external"] #switchPad{min-height:64px}#panel{padding:24px;backgr
 @media(max-width:700px){main{padding:16px 14px}.topbar{padding:12px 14px;flex-wrap:wrap}.story-grid{grid-template-columns:1fr;gap:12px}.scene-media{min-height:210px}.scene-media img{max-height:230px}.message-panel{padding:18px}.heading{display:block}#sceneProgress{margin:0}#controls button{min-width:120px;padding:12px}#controls .primary{flex-basis:100%}#panel{padding:18px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 @media(forced-colors:active){#controls .scan-focus{outline-color:Highlight}#switchPad strong{color:ButtonText}.planet{border:3px solid CanvasText}}
+
+/* Keep the selected command visible without scrolling the story away. */
+html{scroll-padding-bottom:calc(25dvh + 20px)}
+body{padding-bottom:130px}
+#switchPad{position:fixed;bottom:0;left:0;z-index:3;margin:0;height:110px;border-radius:16px 16px 0 0;padding-bottom:max(12px,env(safe-area-inset-bottom))}
