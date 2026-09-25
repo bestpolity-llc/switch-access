@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#245bcd">
+<meta name="description" content="Join the Asterion crew in Mission 001: First Shift. A complete single-switch adventure on SwitchMate.">
+<title>Rift-Signal — SwitchMate</title>
+<link rel="icon" href="../../switchmate-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar"><span class="brand"><img src="../../switchmate-mark.svg" width="45" height="24" alt=""> SwitchMate</span><span>Rift-Signal · First Shift</span></header>
+<main>
+<section id="mission" aria-labelledby="sceneTitle">
+<div class="heading"><div><p class="eyebrow">Asterion / Mission 001</p><h1 id="sceneTitle">Welcome aboard</h1></div><p id="sceneProgress"></p></div>
+<div class="story-grid">
+<figure class="scene-media" id="sceneMedia"><img id="sceneImage" alt=""><div id="sceneFallback" role="img" aria-label="Asterion in deep space"><div class="planet"></div><span id="fallbackLabel">ASTERION</span></div></figure>
+<section class="message-panel"><p class="eyebrow" id="speakerRole"></p><h2 id="speakerName"></h2><p id="narration" aria-live="polite"></p><p id="sceneHint"></p></section>
+</div>
+</section>
+<section id="panel" hidden tabindex="-1" aria-labelledby="panelTitle"><h1 id="panelTitle"></h1><div id="panelCopy"></div></section>
+<nav id="controls" aria-label="Mission and accessibility controls"></nav>
+<p id="scanStatus" role="status" aria-live="polite"></p>
+<p id="audioStatus" role="status">Press Replay to hear the opening message.</p>
+<p id="saveStatus" role="status"></p>
+<button id="switchPad" type="button" aria-label="Select highlighted control"><span>Select highlighted control</span><strong id="padLabel"></strong><small id="modeHint"></small></button>
+<noscript>This mission needs JavaScript. Enable JavaScript, then reload this page.</noscript>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

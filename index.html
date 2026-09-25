@@ -429,7 +429,7 @@
   <p class="intro-copy">Single-switch accessibility tools and games.<br>No account needed. Pick something and get started.</p>
   <a class="tour-link" href="guide.html">New here? Take the guided tour <span aria-hidden="true">↗</span></a>
 </section>
-<div class="section-heading"><h2 id="tools-title">What would you like to do?</h2><span>8 tools &amp; games</span></div>
+<div class="section-heading"><h2 id="tools-title">What would you like to do?</h2><span>9 tools &amp; games</span></div>
 
 <div class="grid" id="grid" aria-labelledby="tools-title">
   <a href="keyboard.html" class="btn btn-type" data-idx="0">
@@ -471,6 +471,11 @@
     <span class="icon">🂡</span>
     <span class="label">Solitaire</span>
     <span class="card-desc">Enjoy a game of cards</span>
+  </a>
+  <a href="games/rift-signal/" class="btn btn-rift" data-idx="8">
+    <span class="icon" aria-hidden="true">🪐</span>
+    <span class="label">Rift-Signal</span>
+    <span class="card-desc">Join the crew. Send your signal.</span>
   </a>
 </div>
 
@@ -546,7 +551,7 @@
 // SWITCH MODE — scan the hub buttons
 // ============================================================
 // Number of hub tiles — derived from the DOM so scanning can never drift
-// from the actual grid (there are 8 tiles, not 5).
+// from the actual grid.
 const BTN_COUNT = document.querySelectorAll('.grid .btn').length;
 const SCAN_SPEED = 1200;
 
