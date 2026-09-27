@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101b28"><meta name="description" content="A single-switch drag racing game. Learn five gears, make the shift, and cross the finish line."><title>Drift-Signal — SwitchMate</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+<header><div><p class="brand">SwitchMate / Drift-Signal</p><h1>First Run</h1></div><span id="stage">Five gears. Your run.</span></header>
+<section class="scene" aria-label="Race view"><img id="sceneImage" src="assets/00-start.webp" alt="At the starting line, looking over the steering wheel and silver dragster nose."><div class="gear"><small>Current gear</small><strong id="gear">N</strong></div><div id="finishBanner" hidden>Finish line crossed</div></section>
+<section class="message" aria-live="polite" aria-atomic="true"><h2 id="title">You make the shifts.</h2><p id="message">Choose gears 1, 2, 3, 4, then 5. The car moves each time you get the next gear.</p></section>
+<nav id="controls" aria-label="Scanned game choices"></nav>
+<button id="switchPad" type="button"><small>Press Space, Enter, or tap here to select</small><strong id="padLabel">Start race</strong></button>
+<p id="status" role="status">The gold outline moves between choices.</p>
+<details><summary>How to play</summary><p>Wait for the gold outline to reach your choice, then press and release your switch (Space or Enter), or tap the large selection pad. You can also tap any choice directly. All menus scan. Pause is included in the scan. Escape pauses the race. Tab stops scanning for ordinary keyboard navigation; the selection pad restarts scanning.</p><p>Wrong gears add 2 seconds and let you try again. Race time is a game score: 10 seconds plus penalties, not real elapsed time. Extra-scan penalties are off by default. If enabled, each completed scan cycle after the first adds 0.5 seconds. Settings, pauses, and loading never add race time.</p><p>This fictional five-speed trainer uses dragster artwork. Real Top Fuel dragsters use direct drive; Pro Stock racers use five-speed manuals. <a href="https://www.nhra.com/news/2016/nhra-101-introduction-nhra-drag-racing">NHRA guide</a>.</p></details>
+<noscript>This game needs JavaScript enabled.</noscript>
+</main><script src="game.js" defer></script></body></html>
