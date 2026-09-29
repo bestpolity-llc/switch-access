@@ -11,7 +11,7 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 
 - **AAC keyboard** with row-column scanning, word prediction, AI
 - **Calculator** with fractions and percentages
-- **3 games** (Pop It!, Pick One, Tap the Dot)
+- **8 games**: Pop It!, Pick One, Tap the Dot, Game Maker, Hellgate, Solitaire, Rift-Signal, and Drift-Signal
 - **Google sign-in** to sync settings and send feedback
 
 ## Pages
@@ -24,6 +24,22 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 | `games/pop.html` | Pop balloons |
 | `games/choose.html` | Two-option scanning choice game |
 | `games/tap.html` | Reaction timing game |
+| `games/maker.html` | Generated mini-games with themes and local history |
+| `games/hellgate.html` | Single-switch corridor shooter |
+| `games/solitaire.html` | Switch-accessible solitaire |
+| `games/rift-signal/` | Branching space adventure |
+| `games/drift-signal/` | Five-gear racing activity |
+
+## Shelved staff workflow
+
+The public site focuses on Type, Calc, and the eight games. The staff portal,
+provider page, participant session runner, and provider demo documents were
+removed from the deployed source. Their last retained version is commit
+`6c8b0439afc283c223bc46ab23b1e904352629f9`; recover the files from Git history
+when revisiting that separate workflow.
+
+This removal does not delete Firebase records or change the shared Firestore
+rules. Authentication, preference sync, and feedback for the public tools remain.
 
 ## Touch Controls (iPad)
 
