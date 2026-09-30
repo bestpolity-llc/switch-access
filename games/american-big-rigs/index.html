@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>American Big Rigs — SwitchMate</title>
+<meta name="description" content="Back a big rig into its loading dock with one switch. Adjustable scanning, move previews, and room to try again.">
+<meta name="theme-color" content="#0d1218">
+<style>
+  :root{
+    --bg:#0d1218;
+    --panel:#172230;
+    --panel-2:#1e2b3c;
+    --ink:#ffffff;
+    --muted:#a9bccf;
+    --accent:#ffd23f;
+    --good:#5ee08a;
+    --warn:#ff9a5c;
+    --line:#2f4256;
+    --focus:#7dd3fc;
+    --radius:14px;
+    --choice-h:78px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"DejaVu Sans","Verdana",system-ui,sans-serif;
+    overflow:auto;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 400px;
+    gap:14px;
+    padding:14px;
+  }
+  /* ---------- board ---------- */
+  .board{
+    position:relative;
+    background:#0a0f14;
+    border:3px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+  }
+  .toast{
+    position:absolute;
+    left:50%;
+    top:16px;
+    transform:translateX(-50%);
+    background:rgba(13,18,24,.92);
+    border:3px solid var(--accent);
+    color:var(--ink);
+    font-size:26px;
+    font-weight:700;
+    padding:10px 22px;
+    border-radius:999px;
+    white-space:nowrap;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .25s;
+  }
+  .toast.show{opacity:1}
+
+  /* ---------- side panel ---------- */
+  .side{
+    display:flex;
+    flex-direction:column;
+    gap:clamp(6px,1vh,12px);
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+  }
+  h1{
+    font-size:clamp(20px,3.2vh,30px);
+    line-height:1.1;
+    margin:0;
+    letter-spacing:.5px;
+  }
+  h1 span{color:var(--accent)}
+  .stats{
+    display:flex;
+    gap:10px;
+  }
+  .stat{
+    flex:1;
+    background:var(--panel);
+    border:2px solid var(--line);
+    border-radius:10px;
+    padding:6px 12px;
+  }
+  .stat b{
+    display:block;
+    font-size:11px;
+    letter-spacing:1.5px;
+    color:var(--muted);
+    font-weight:700;
+  }
+  .stat i{
+    font-style:normal;
+    font-size:clamp(19px,2.8vh,28px);
+    font-weight:800;
+  }
+  .hint{
+    background:var(--panel);
+    border:2px solid var(--line);
+    border-left:10px solid var(--accent);
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:clamp(17px,2.4vh,23px);
+    font-weight:700;
+    line-height:1.25;
+    min-height:clamp(58px,9vh,96px);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .hint .ico{font-size:clamp(20px,2.8vh,30px)}
+
+  .choices{
+    display:flex;
+    flex-direction:column;
+    gap:clamp(5px,.8vh,8px);
+    flex:1;
+    min-height:0;
+  }
+  .choice{
+    position:relative;
+    overflow:hidden;
+    flex:1;
+    min-height:clamp(50px,7.4vh,78px);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 14px;
+    background:var(--panel);
+    border:4px solid var(--line);
+    border-radius:var(--radius);
+    font-size:clamp(20px,2.9vh,32px);
+    font-weight:800;
+    letter-spacing:.5px;
+    color:var(--muted);
+    transition:background .12s,border-color .12s,color .12s,transform .12s;
+  }
+  .choice .glyph{
+    font-size:clamp(18px,2.7vh,30px);
+    width:clamp(52px,8vh,78px);
+    text-align:center;
+    flex:none;
+    letter-spacing:-3px;
+  }
+  .choice.on{
+    background:var(--accent);
+    border-color:#fff;
+    color:#0d1218;
+    transform:scale(1.035);
+    box-shadow:0 0 0 4px rgba(255,210,63,.28);
+  }
+  .choice.on .glyph{color:#0d1218}
+  .choice .timer{
+    position:absolute;
+    left:0;bottom:0;
+    height:9px;
+    width:0%;
+    background:#fff;
+    opacity:.85;
+  }
+  .choice.on .timer{background:#0d1218;opacity:.45}
+  .choice.dim{opacity:.45}
+
+  .footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-size:16px;
+    color:var(--muted);
+    font-weight:700;
+    letter-spacing:.5px;
+  }
+  kbd{
+    background:var(--panel-2);
+    border:2px solid var(--line);
+    border-bottom-width:4px;
+    border-radius:7px;
+    padding:2px 10px;
+    color:var(--ink);
+    font-family:inherit;
+    font-size:16px;
+  }
+  .live{
+    position:absolute;
+    width:1px;height:1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+  }
+
+  /* ---------- overlay ---------- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(6,9,13,.9);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    z-index:40;
+  }
+  .overlay[hidden]{display:none}
+  .card{
+    background:var(--panel);
+    border:4px solid var(--accent);
+    border-radius:20px;
+    padding:34px 40px;
+    max-width:820px;
+    text-align:center;
+  }
+  .card h2{
+    font-size:46px;
+    margin:0 0 14px;
+    letter-spacing:1px;
+  }
+  .card p{
+    font-size:25px;
+    line-height:1.45;
+    color:var(--ink);
+    margin:0 0 14px;
+  }
+  .card .stars{font-size:60px;letter-spacing:8px;color:var(--accent);margin:6px 0 12px}
+  .card .prompt{
+    font-size:29px;
+    font-weight:800;
+    background:var(--accent);
+    color:#0d1218;
+    border-radius:999px;
+    padding:12px 30px;
+    display:inline-block;
+    margin-top:8px;
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+  /* ---------- caregiver settings ---------- */
+  .settings{
+    position:fixed;
+    inset:0;
+    background:rgba(6,9,13,.94);
+    z-index:60;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    overflow:auto;
+  }
+  .settings[hidden]{display:none}
+  .settings .card{text-align:left;max-width:760px;border-color:var(--focus)}
+  .settings h2{font-size:30px;text-align:left}
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+    font-size:21px;
+  }
+  .row:last-of-type{border-bottom:0}
+  .row input[type=range]{width:280px}
+  .row input[type=checkbox]{width:28px;height:28px}
+  .note{
+    font-size:17px;
+    color:var(--muted);
+    line-height:1.5;
+    border-top:2px solid var(--line);
+    padding-top:14px;
+    margin-top:10px;
+  }
+  .settings button{
+    margin-top:18px;
+    font:inherit;
+    font-size:22px;
+    font-weight:800;
+    background:var(--accent);
+    color:#0d1218;
+    border:0;
+    border-radius:10px;
+    padding:12px 26px;
+    cursor:pointer;
+  }
+  .val{color:var(--accent);font-weight:800;min-width:70px;text-align:right}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
+    .choice{font-size:26px}
+    h1{font-size:24px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .choice.on{transform:none}
+    .card .prompt{animation:none}
+  }
+
+  button{font-family:inherit;cursor:pointer}
+  button:focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+  .choice{text-align:left;flex-shrink:0}
+  .choice:disabled{cursor:default}
+  .footer{flex-wrap:wrap}
+  #menuButton{background:var(--panel-2);color:var(--ink);border:2px solid var(--focus);border-radius:8px;font-size:18px;padding:8px 18px}
+  .settings{padding:16px}
+  .settings .card{width:min(760px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:clamp(16px,3vw,32px)}
+  .settings .card h2{font-size:clamp(26px,4vw,38px)}
+  .settings .card p{font-size:clamp(17px,2.4vw,22px)}
+  #menuActions{display:grid;gap:10px}
+  #menuActions button{margin:0;width:100%;min-height:52px;background:var(--panel-2);color:white;border:3px solid var(--line);text-align:left}
+  #menuActions button.scan{background:var(--accent);color:var(--bg);border-color:white}
+  @media(max-width:1100px){
+    .app{height:auto;min-height:100dvh;grid-template-rows:clamp(220px,34dvh,380px) auto;padding:10px;gap:10px}
+    .side{overflow:visible}
+    .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .choice{font-size:clamp(15px,2.5vw,24px);min-height:60px;gap:5px;padding:8px;border-width:3px;letter-spacing:0}
+    .choice .glyph{font-size:18px;width:32px}
+    .choice.on{transform:none}
+    .hint{font-size:18px;min-height:60px;padding:8px}
+    .toast{font-size:18px;max-width:95%;white-space:normal;text-align:center;padding:8px 12px}
+    .footer{font-size:14px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="board">
+    <canvas id="cv" width="900" height="800" role="img" aria-label="Top-down loading lot with your truck, trailer, and target dock."></canvas>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="side">
+    <h1>AMERICAN <span>BIG RIGS</span><br><small style="font-size:19px;color:var(--muted);letter-spacing:2px">BACK IT UP</small></h1>
+
+    <div class="stats">
+      <div class="stat"><b>DOCK</b><i id="sRound">1 / 3</i></div>
+      <div class="stat"><b>MOVES</b><i id="sSteps">0</i></div>
+      <div class="stat"><b>IN DOCK</b><i id="sAlign">—</i></div>
+    </div>
+
+    <div class="hint" id="hint"><span class="ico">👋</span><span id="hintText">Press SPACE to start</span></div>
+
+    <div class="choices" id="choices"></div>
+
+    <div class="footer">
+      <span><kbd>SPACE</kbd> or <kbd>ENTER</kbd> to choose</span>
+      <button id="menuButton" type="button">Menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="live" id="live" role="status" aria-live="assertive"></div>
+
+<div class="settings" id="accessMenu" role="dialog" aria-modal="true" aria-labelledby="menuTitle" aria-describedby="menuText">
+  <div class="card">
+    <h2 id="menuTitle">Back It Up</h2>
+    <p id="menuText"></p>
+    <div id="menuActions"></div>
+    <p class="note">Press and release Space or Enter, or tap the empty background, to select the highlighted choice. You can also tap a labeled button directly. Tab pauses automatic scanning.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const CFG = {
+  scanMs: 2000,      // dwell per highlighted option
+  moveMs: 620,       // step animation
+  preview: true,
+  sound: true,
+  hints: true,
+  rounds: 3
+};
+const SETTINGS_KEY = "switchmate.american-big-rigs.settings.v1";
+try {
+  const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || localStorage.getItem("abr-cfg") || "null");
+  if (saved && typeof saved === "object") {
+    if (Number.isFinite(saved.scanMs)) CFG.scanMs = Math.max(800, Math.min(5000, saved.scanMs));
+    if (Number.isInteger(saved.rounds)) CFG.rounds = Math.max(1, Math.min(5, saved.rounds));
+    ["preview", "sound", "hints"].forEach(key => { if (typeof saved[key] === "boolean") CFG[key] = saved[key]; });
+  }
+} catch(e){}
+function saveCfg(){
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(CFG)); } catch(e){}
+}
+
+/* ============================================================
+   GEOMETRY
+   ============================================================ */
+const W = 900, H = 800;
+const STEP_LEN = 75;            // how far the rig backs per move
+const TRAILER_LEN = 170, TRAILER_W = 66;
+const TRACTOR_LEN = 120, TRACTOR_W = 62;
+const FOLLOW = 0.65;            // how fast the trailer angle chases the chosen angle
+const MAX_TRAILER_ANGLE = 0.55; // hard cap on trailer yaw (radians)
+
+const DOCK = { x0:340, x1:560, y0:20, y1:190, cx:450, targetY:140 };
+const WIN = { x0:380, x1:520, y0:95, y1:185, tol:0.12 };
+
+const OPTIONS = [
+  { key:-2, label:"SWING LEFT",  glyph:"◀◀", ang:-0.36, side:-1 },
+  { key:-1, label:"EASE LEFT",   glyph:"◀",  ang:-0.18, side:-1 },
+  { key: 0, label:"STRAIGHT",    glyph:"▲",  ang: 0.00, side: 0 },
+  { key: 1, label:"EASE RIGHT",  glyph:"▶",  ang: 0.18, side: 1 },
+  { key: 2, label:"SWING RIGHT",  glyph:"▶▶", ang: 0.36, side: 1 },
+  { key: 3, label:"PULL FORWARD", glyph:"▼", ang: 0.00, side: 0, forward:true },
+  { key: 4, label:"MENU", glyph:"☰", menu:true }
+];
+
+// heading points from the trailer's rear bumper toward the cab.
+// theta = PI  =>  heading (0,1) = pointing DOWN, so backing up moves the bumper UP.
+function headingOf(th){ return { x:Math.sin(th), y:-Math.cos(th) }; }
+
+function norm(a){ // wrap to (-PI, PI]
+  while (a >  Math.PI) a -= Math.PI*2;
+  while (a <= -Math.PI) a += Math.PI*2;
+  return a;
+}
+
+// Simulate one move. Pure function so the ghost preview uses the same maths.
+function simulate(st, opt){
+  const target = Math.PI + opt.ang;
+  let th = st.th + (target - st.th) * FOLLOW;
+  th = Math.PI + Math.max(-MAX_TRAILER_ANGLE, Math.min(MAX_TRAILER_ANGLE, norm(th - Math.PI)));
+  const h = headingOf(th);
+  // backing moves the bumper against the heading; pulling forward moves it along it
+  const dir = opt.forward ? 1 : -1;
+  const len = STEP_LEN * (opt.forward ? 0.85 : 1);
+  return { x: st.x + h.x*len*dir, y: st.y + h.y*len*dir, th: th };
+}
+
+function isParked(st){
+  const off = Math.abs(norm(st.th - Math.PI));
+  return st.x >= WIN.x0 && st.x <= WIN.x1 &&
+         st.y >= WIN.y0 && st.y <= WIN.y1 &&
+         off <= WIN.tol;
+}
+
+/* ============================================================
+   AUDIO — soft, optional, never startling
+   ============================================================ */
+let AC = null;
+function tone(freq, ms, gain, type){
+  if (!CFG.sound) return;
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "sine";
+    o.frequency.value = freq;
+    g.gain.value = 0;
+    o.connect(g); g.connect(AC.destination);
+    const t = AC.currentTime;
+    g.gain.linearRampToValueAtTime(gain || 0.05, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (ms||150)/1000);
+    o.start(t); o.stop(t + (ms||150)/1000 + 0.02);
+  } catch(e){}
+}
+const sfx = {
+  tick:  function(){ tone(660, 70, 0.025, "triangle"); },
+  pick:  function(){ tone(440, 130, 0.06, "triangle"); },
+  step:  function(){ tone(220, 160, 0.045, "sine"); },
+  bump:  function(){ tone(150, 260, 0.05, "sine"); },
+  good:  function(){ [523,659,784].forEach(function(f,i){ setTimeout(function(){ tone(f,240,0.06,"sine"); }, i*110); }); },
+  win:   function(){ [523,659,784,1046,1318].forEach(function(f,i){ setTimeout(function(){ tone(f,320,0.07,"sine"); }, i*130); }); }
+};
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+const START = [
+  { x:370, y:600, th:Math.PI },
+  { x:300, y:600, th:Math.PI },
+  { x:630, y:600, th:Math.PI + 0.07 },
+  { x:250, y:610, th:Math.PI - 0.05 },
+  { x:690, y:610, th:Math.PI }
+];
+
+let G = {
+  phase: "intro",   // intro | scan | moving | roundDone | allDone | paused
+  round: 0,
+  rounds: CFG.rounds,
+  steps: 0,
+  bumps: 0,
+  st: null,         // {x,y,th}
+  from: null,       // animation origin
+  to: null,
+  t0: 0,
+  hl: 0,            // highlighted option index
+  scanT0: 0,
+  hint: ""
+};
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const elChoices = document.getElementById("choices");
+const elRound = document.getElementById("sRound");
+const elSteps = document.getElementById("sSteps");
+const elAlign = document.getElementById("sAlign");
+const elHintText = document.getElementById("hintText");
+const elLive = document.getElementById("live");
+const elToast = document.getElementById("toast");
+const panel = document.getElementById("accessMenu");
+const menuActions = document.getElementById("menuActions");
+let panelItems = [], panelIndex = 0, panelT0 = 0;
+let pausedPhase = "intro", pausedState = null, pausedAt = 0;
+let heldKey = null, manual = false, lastActivation = -Infinity;
+let pointerPress = null;
+
+/* ---------- choice DOM ---------- */
+const choiceEls = OPTIONS.map(function(opt, i){
+  const d = document.createElement("button");
+  d.type = "button";
+  d.className = "choice";
+  d.innerHTML = '<span class="glyph">' + opt.glyph + '</span><span>' + opt.label + '</span>' +
+                '<span class="timer"></span>';
+  d.addEventListener("click", function(){ press(i); });
+  elChoices.appendChild(d);
+  return d;
+});
+
+function renderChoices(){
+  choiceEls.forEach(function(el, i){
+    el.classList.toggle("on", !manual && G.phase === "scan" && i === G.hl);
+    el.disabled = G.phase !== "scan";
+    if (!manual && G.phase === "scan" && i === G.hl) el.setAttribute("aria-current", "true");
+    else el.removeAttribute("aria-current");
+    el.classList.toggle("dim", G.phase !== "scan");
+  });
+}
+
+let lastAnnounced = -1;
+function announceScan(){
+  if (G.hl === lastAnnounced) return;
+  lastAnnounced = G.hl;
+  elLive.textContent = "Choice: " + OPTIONS[G.hl].label;
+  if (G.phase === "scan") sfx.tick();
+}
+
+/* ============================================================
+   HINTS
+   ============================================================ */
+function coach(){
+  if (!CFG.hints) { elHintText.textContent = "Your turn — pick the best choice."; return; }
+  const st = G.st;
+  const dx = DOCK.cx - st.x;
+  const off = norm(st.th - Math.PI);
+  let msg;
+  if (isParked(st)) {
+    msg = "Perfect — you are in the dock!";
+  } else if (st.y < WIN.y0) {
+    msg = "You are past the dock. Choose PULL FORWARD and line up again.";
+  } else if (st.y <= WIN.y1 && Math.abs(dx) > 30) {
+    msg = dx > 0 ? "You are lined up but too far LEFT. Swing RIGHT."
+                 : "You are lined up but too far RIGHT. Swing LEFT.";
+  } else if (Math.abs(off) > 0.30) {
+    msg = "The trailer is swinging sideways. Choose STRAIGHT to settle it.";
+  } else if (dx > 60) {
+    msg = "Aim the trailer to the RIGHT. Try SWING RIGHT.";
+  } else if (dx > 18) {
+    msg = "Aim it a little to the RIGHT. Try EASE RIGHT.";
+  } else if (dx < -60) {
+    msg = "Aim the trailer to the LEFT. Try SWING LEFT.";
+  } else if (dx < -18) {
+    msg = "Aim it a little to the LEFT. Try EASE LEFT.";
+  } else {
+    msg = "You are lined up! Choose STRAIGHT and back it in.";
+  }
+  elHintText.textContent = msg;
+}
+
+function toast(msg, ms){
+  elToast.textContent = msg;
+  elToast.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ elToast.classList.remove("show"); }, ms || 1600);
+}
+
+/* ============================================================
+   STATE TRANSITIONS
+   ============================================================ */
+function startRound(i){
+  G.round = i;
+  if (i === 0) G.rounds = CFG.rounds;
+  G.steps = 0;
+  G.bumps = 0;
+  const s = START[i % START.length];
+  G.st = { x:s.x, y:s.y, th:s.th };
+  G.from = null; G.to = null;
+  G.phase = "scan";
+  G.hl = 0; lastAnnounced = -1;
+  G.scanT0 = performance.now();
+  panel.hidden = true;
+  document.querySelector(".app").inert = false;
+  updateHud();
+  coach();
+  renderChoices();
+  announceScan();
+}
+
+function beginScan(){
+  G.phase = "scan";
+  G.scanT0 = performance.now();
+  lastAnnounced = -1;
+  renderChoices();
+  announceScan();
+  coach();
+}
+
+function press(selected){
+  if (document.hidden || performance.now() - lastActivation < 450) return;
+  if (!panel.hidden) {
+    const i = Number.isInteger(selected) ? selected : panelIndex;
+    if (!panelItems[i]) return;
+    lastActivation = performance.now();
+    panelItems[i].run();
+    return;
+  }
+  if (G.phase !== "scan") return;
+  if (Number.isInteger(selected)) G.hl = selected;
+  lastActivation = performance.now();
+  if (OPTIONS[G.hl].menu) { openMenu(); return; }
+
+  const opt = OPTIONS[G.hl];
+  sfx.pick();
+  G.steps++;
+  G.from = { x:G.st.x, y:G.st.y, th:G.st.th };
+  G.to = simulate(G.st, opt);
+  G.t0 = performance.now();
+  G.phase = "moving";
+  renderChoices();
+  updateHud();
+}
+
+function finishMove(){
+  const prev = G.from;
+  G.st = G.to;
+  G.from = null; G.to = null;
+  sfx.step();
+
+  // keep the rig on the lot — gentle nudge, never a punishment
+  const minX = 95 + TRAILER_W/2, maxX = 805 - TRAILER_W/2;
+  if (G.st.x < minX || G.st.x > maxX) {
+    G.st.x = Math.max(minX, Math.min(maxX, G.st.x));
+    G.bumps++;
+    sfx.bump();
+    toast("Easy there — back onto the pavement.", 1800);
+    elHintText.textContent = "You drifted off the pavement. Pick STRAIGHT to settle, then aim again.";
+  }
+  // the bumper may reach the dock floor, but not through the back wall
+  if (G.st.y < 62) {
+    G.st.y = 62;
+    sfx.bump();
+    toast("That's the wall. Pull forward and try again.", 2000);
+    elHintText.textContent = "You reached the wall. Choose PULL FORWARD to line up again.";
+  }
+  if (G.st.y > 700) G.st.y = 700;
+
+  updateHud();
+
+  if (isParked(G.st)) {
+    const stars = G.steps <= 9 ? 3 : (G.steps <= 14 ? 2 : 1);
+    G.lastStars = stars;
+    G.phase = "roundDone";
+    if (G.round >= G.rounds - 1) {
+      showAllDone(stars);
+    } else {
+      showRoundDone(stars);
+    }
+    return;
+  }
+
+  beginScan();
+}
+
+function updateHud(){
+  elRound.textContent = (G.round + 1) + " / " + G.rounds;
+  elSteps.textContent = String(G.steps);
+  const off = Math.abs(norm(G.st.th - Math.PI));
+  if (G.st.y > WIN.y1 || Math.abs(G.st.x - DOCK.cx) > 70) elAlign.textContent = "far";
+  else if (off <= WIN.tol && G.st.y <= WIN.y1 && G.st.y >= WIN.y0) elAlign.textContent = "yes!";
+  else elAlign.textContent = "close";
+}
+
+function showRoundDone(stars){
+  sfx.good();
+  openMenu();
+}
+
+function showAllDone(stars){
+  G.phase = "allDone";
+  sfx.win();
+  openMenu();
+}
+
+function nextRound(){ startRound(G.round + 1); }
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function rot(v, a){
+  const c = Math.cos(a), s = Math.sin(a);
+  return { x: v.x*c - v.y*s, y: v.x*s + v.y*c };
+}
+
+function drawLot(){
+  // grass
+  ctx.fillStyle = "#24402c";
+  ctx.fillRect(0,0,W,H);
+
+  // asphalt lot
+  ctx.fillStyle = "#3d4753";
+  ctx.fillRect(70, 0, 760, H);
+
+  // kerbs
+  ctx.fillStyle = "#5a6672";
+  ctx.fillRect(70, 0, 10, H);
+  ctx.fillRect(820, 0, 10, H);
+
+  // painted lane lines
+  ctx.strokeStyle = "rgba(255,255,255,.13)";
+  ctx.lineWidth = 6;
+  ctx.setLineDash([34, 30]);
+  [190, 450, 710].forEach(function(x){
+    ctx.beginPath(); ctx.moveTo(x, 210); ctx.lineTo(x, H); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+}
+
+function drawDock(){
+  const d = DOCK;
+  // bay floor
+  ctx.fillStyle = "#20262e";
+  ctx.fillRect(d.x0, d.y0, d.x1-d.x0, d.y1-d.y0);
+  // back wall
+  ctx.fillStyle = "#8c2f2f";
+  ctx.fillRect(d.x0, 0, d.x1-d.x0, 20);
+  // bay outline
+  ctx.strokeStyle = "#ffd23f";
+  ctx.lineWidth = 7;
+  ctx.strokeRect(d.x0, d.y0, d.x1-d.x0, d.y1-d.y0);
+  // hazard stripes on the lip
+  ctx.save();
+  ctx.beginPath(); ctx.rect(d.x0, d.y1-14, d.x1-d.x0, 14); ctx.clip();
+  for (let x = d.x0-20; x < d.x1+20; x += 26){
+    ctx.fillStyle = "#ffd23f";
+    ctx.beginPath();
+    ctx.moveTo(x, d.y1); ctx.lineTo(x+13, d.y1-14);
+    ctx.lineTo(x+26, d.y1-14); ctx.lineTo(x+13, d.y1);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  // target marker
+  ctx.strokeStyle = "rgba(94,224,138,.95)";
+  ctx.lineWidth = 4;
+  ctx.setLineDash([12,10]);
+  ctx.beginPath(); ctx.moveTo(d.cx, d.y1+18); ctx.lineTo(d.cx, d.y1+70); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(d.cx-16, d.y1+78); ctx.lineTo(d.cx+16, d.y1+78); ctx.lineTo(d.cx, d.y1+56);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(94,224,138,.95)"; ctx.fill();
+
+  ctx.fillStyle = "#ffd23f";
+  ctx.font = "bold 34px Verdana, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("DOCK", d.cx, d.y0 + 52);
+}
+
+function drawBox(cx, cy, len, w, angle, fill, stroke){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke || "rgba(0,0,0,.55)";
+  ctx.lineWidth = 4;
+  const r = Math.min(10, w/3);
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(-len/2, -w/2, len, w, r);
+  else ctx.rect(-len/2, -w/2, len, w);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+// Draw the whole rig from a bumper position + heading.
+// heading points bumper -> cab, so the trailer extends along +heading.
+function drawRig(st, ghost){
+  const h = headingOf(st.th);
+  const trailerAng = Math.atan2(h.y, h.x);
+  const hitch = { x: st.x + h.x*TRAILER_LEN, y: st.y + h.y*TRAILER_LEN };
+
+  const hitchAng = Math.max(-0.62, Math.min(0.62, -norm(st.th - Math.PI) * 1.7));
+  const tDir = rot(h, hitchAng);
+  const tractorAng = Math.atan2(tDir.y, tDir.x);
+
+  ctx.save();
+  if (ghost) ctx.globalAlpha = 0.28;
+
+  const frame = ghost ? "#ffe89a" : "#2b2f36";
+  const body  = ghost ? "#ffe89a" : "#f2f4f7";
+  const cab   = ghost ? "#ffe89a" : "#c0392b";
+
+  // trailer
+  const tcx = st.x + h.x*TRAILER_LEN/2, tcy = st.y + h.y*TRAILER_LEN/2;
+  drawBox(tcx, tcy, TRAILER_LEN, TRAILER_W, trailerAng, body, frame);
+
+  // trailer ribs
+  if (!ghost){
+    ctx.save();
+    ctx.translate(tcx, tcy); ctx.rotate(trailerAng);
+    ctx.strokeStyle = "rgba(0,0,0,.18)"; ctx.lineWidth = 3;
+    for (let x = -TRAILER_LEN/2 + 22; x < TRAILER_LEN/2 - 10; x += 26){
+      ctx.beginPath(); ctx.moveTo(x, -TRAILER_W/2 + 4); ctx.lineTo(x, TRAILER_W/2 - 4); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // rear bumper of the trailer (the thing that must land in the dock)
+  ctx.fillStyle = ghost ? "#ffe89a" : "#ffd23f";
+  ctx.beginPath(); ctx.arc(st.x, st.y, ghost ? 6 : 9, 0, Math.PI*2); ctx.fill();
+
+  // tractor
+  const tcabx = hitch.x + tDir.x*TRACTOR_LEN/2;
+  const tcaby = hitch.y + tDir.y*TRACTOR_LEN/2;
+  drawBox(tcabx, tcaby, TRACTOR_LEN, TRACTOR_W, tractorAng, cab, frame);
+
+  // windshield
+  if (!ghost){
+    ctx.save();
+    ctx.translate(tcabx, tcaby); ctx.rotate(tractorAng);
+    ctx.fillStyle = "rgba(20,30,45,.85)";
+    ctx.fillRect(TRACTOR_LEN/2 - 26, -TRACTOR_W/2 + 9, 16, TRACTOR_W - 18);
+    // exhaust stacks
+    ctx.fillStyle = "#9aa5b1";
+    ctx.fillRect(-TRACTOR_LEN/2 + 14, -TRACTOR_W/2 - 9, 9, 12);
+    ctx.fillRect(-TRACTOR_LEN/2 + 14,  TRACTOR_W/2 - 3, 9, 12);
+    ctx.restore();
+  }
+
+  // wheels
+  if (!ghost){
+    ctx.fillStyle = "#12161c";
+    const wheel = function(cx, cy, ang, len, w){
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+      ctx.fillRect(-len/2, -w/2, len, w); ctx.restore();
+    };
+    wheel(tcx, tcy, trailerAng, 96, TRAILER_W + 16);
+    wheel(tcabx, tcaby, tractorAng, 78, TRACTOR_W + 14);
+  }
+
+  ctx.restore();
+}
+
+function drawGuide(st){
+  // dashed line showing the direction the trailer is heading while backing
+  const h = headingOf(st.th);
+  const dx = -h.x, dy = -h.y;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,210,63,.75)";
+  ctx.lineWidth = 5;
+  ctx.setLineDash([16, 14]);
+  ctx.beginPath();
+  ctx.moveTo(st.x, st.y);
+  ctx.lineTo(st.x + dx*300, st.y + dy*300);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawLot();
+  drawDock();
+
+  const st = currentState();
+  if (st) {
+    // ghost preview of the highlighted choice
+    if (G.phase === "scan" && CFG.preview && !OPTIONS[G.hl].menu) {
+      const ghost = simulate(st, OPTIONS[G.hl]);
+      if (ghost.y > DOCK.y1 - 10) drawRig(ghost, true);
+    }
+    drawGuide(st);
+    drawRig(st, false);
+  }
+
+  // parking tolerance ring
+  ctx.save();
+  ctx.strokeStyle = isParked(st) ? "rgba(94,224,138,.95)" : "rgba(255,255,255,.22)";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(DOCK.cx, WIN.y1, 78, Math.PI, 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// interpolated state during a move animation
+function currentState(){
+  if (!G.st) return null;
+  if (G.phase === "paused" && pausedState) return pausedState;
+  if (G.phase === "moving" && G.from && G.to){
+    let p = (performance.now() - G.t0) / CFG.moveMs;
+    if (p < 0) p = 0;
+    if (p > 1) p = 1;
+    const e = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    return {
+      x: G.from.x + (G.to.x - G.from.x)*e,
+      y: G.from.y + (G.to.y - G.from.y)*e,
+      th: G.from.th + (G.to.th - G.from.th)*e
+    };
+  }
+  return G.st;
+}
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+function loop(now){
+  if (document.hidden) { requestAnimationFrame(loop); return; }
+  if (!panel.hidden && !manual && !heldKey && !pointerPress && now - panelT0 >= CFG.scanMs) {
+    panelIndex = (panelIndex + 1) % panelItems.length;
+    panelT0 = now;
+    highlightPanel();
+  }
+  if (G.phase === "scan" && !manual && !heldKey && !pointerPress){
+    const el = now - G.scanT0;
+    const frac = Math.min(1, el / CFG.scanMs);
+    const bar = choiceEls[G.hl].querySelector(".timer");
+    bar.style.width = (frac*100) + "%";
+    if (el >= CFG.scanMs){
+      choiceEls[G.hl].querySelector(".timer").style.width = "0%";
+      G.hl = (G.hl + 1) % OPTIONS.length;
+      G.scanT0 = now;
+      renderChoices();
+      announceScan();
+    }
+  }
+  if (G.phase === "moving" && now - G.t0 >= CFG.moveMs){
+    finishMove();
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   SWITCH-ACCESSIBLE MENUS AND INPUT
+   ============================================================ */
+function highlightPanel(){
+  if (panel.hidden) return;
+  Array.from(menuActions.children).forEach((button, i) => {
+    button.classList.toggle("scan", !manual && i === panelIndex);
+    if (!manual && i === panelIndex) button.setAttribute("aria-current", "true");
+    else button.removeAttribute("aria-current");
+  });
+  if (!manual && panelItems[panelIndex]) {
+    elLive.textContent = panelItems[panelIndex].label;
+    menuActions.children[panelIndex].scrollIntoView({block:"nearest"});
+  }
+}
+function showPanel(title, description, items, keepIndex){
+  document.getElementById("menuTitle").textContent = title;
+  document.getElementById("menuText").textContent = description;
+  panelItems = items;
+  panelIndex = keepIndex ? Math.min(panelIndex, items.length - 1) : 0;
+  panelT0 = performance.now();
+  menuActions.replaceChildren();
+  items.forEach((item, i) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.label;
+    button.addEventListener("click", () => press(i));
+    menuActions.appendChild(button);
+  });
+  panel.hidden = false;
+  document.querySelector(".app").inert = true;
+  highlightPanel();
+  if (manual) menuActions.children[panelIndex].focus();
+}
+function resume(){
+  panel.hidden = true;
+  document.querySelector(".app").inert = false;
+  G.phase = pausedPhase;
+  if (G.phase === "moving") G.t0 += performance.now() - pausedAt;
+  G.scanT0 = performance.now();
+  renderChoices();
+  if (manual) choiceEls[G.hl].focus();
+}
+function openMenu(){
+  if (panel.hidden || G.phase !== "paused") {
+    pausedPhase = G.phase;
+    pausedState = currentState();
+    pausedAt = performance.now();
+    G.phase = "paused";
+    renderChoices();
+  }
+  let title = "Game paused", text = "Take your time. Your truck will wait.";
+  let first = {label:"Resume game", run:resume};
+  if (pausedPhase === "intro") {
+    title = "Back It Up";
+    text = "Back your big rig into the loading dock. Choices light up one at a time. Preview your move, then press your switch. There is no time limit, and you can always try again.";
+    first = {label:"Start driving", run:() => startRound(0)};
+  } else if (pausedPhase === "roundDone") {
+    title = "Nice parking!";
+    text = "Dock " + (G.round + 1) + " complete. " + "★".repeat(G.lastStars) + " You got the trailer safely into the dock.";
+    first = {label:"Next dock", run:nextRound};
+  } else if (pausedPhase === "allDone") {
+    title = "All docks done!";
+    text = "You backed every big rig into its dock. Great driving.";
+    first = {label:"Play again", run:() => startRound(0)};
+  }
+  const items = [first, {label:"Settings", run:() => showSettings()}];
+  if (pausedPhase === "scan" || pausedPhase === "moving") items.push({label:"Restart run", run:() => showPanel("Start again?", "Your current run will reset.", [{label:"Keep this run",run:openMenu},{label:"Restart",run:() => startRound(0)}])});
+  items.push({label:"Return to library", run:() => showPanel("Return to the library?", "You can start a new run whenever you like.", [{label:"Stay here",run:openMenu},{label:"Leave game",run:() => {window.location.href="../../";}}])});
+  showPanel(title, text, items);
+}
+function showSettings(keepIndex){
+  const update = fn => {fn(); saveCfg(); showSettings(true);};
+  showPanel("Your settings", "Choose a setting to change it. Number of docks applies to the next run.", [
+    {label:"Slower: " + (CFG.scanMs/1000).toFixed(1) + " seconds",run:() => update(() => {CFG.scanMs=Math.min(5000,CFG.scanMs+200);})},
+    {label:"Faster: " + (CFG.scanMs/1000).toFixed(1) + " seconds",run:() => update(() => {CFG.scanMs=Math.max(800,CFG.scanMs-200);})},
+    {label:"Docks next run: " + CFG.rounds,run:() => update(() => {CFG.rounds=CFG.rounds%5+1;})},
+    {label:"Move preview: " + (CFG.preview?"on":"off"),run:() => update(() => {CFG.preview=!CFG.preview;})},
+    {label:"Sounds: " + (CFG.sound?"on":"off"),run:() => update(() => {CFG.sound=!CFG.sound;})},
+    {label:"Coaching hints: " + (CFG.hints?"on":"off"),run:() => update(() => {CFG.hints=!CFG.hints; coach();})},
+    {label:"Back",run:openMenu}
+  ], keepIndex);
+}
+function resetTiming(){ G.scanT0=performance.now(); panelT0=performance.now(); }
+function isSwitchKey(e){return ["Space","Enter","NumpadEnter"].includes(e.code) || e.key === " " || e.key === "Enter";}
+window.addEventListener("keydown", e => {
+  if (e.key === "Tab") { manual=true; renderChoices(); highlightPanel(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if ((e.code === "KeyS" || e.key === "Escape") && !e.repeat) {
+    e.preventDefault(); heldKey=null; openMenu();
+    if (e.code === "KeyS") showSettings();
+    return;
+  }
+  if (!isSwitchKey(e)) return;
+  if (manual && e.target.closest("button")) return;
+  e.preventDefault();
+  if (e.repeat || heldKey) return;
+  manual=false; heldKey=e.code || e.key;
+  renderChoices(); highlightPanel();
+});
+window.addEventListener("keyup", e => {
+  if (!heldKey || heldKey !== (e.code || e.key)) return;
+  e.preventDefault(); heldKey=null; press(); resetTiming();
+});
+// A stationary primary pointer on the board or menu background acts as a switch.
+// Button taps activate their labels directly; dragging/scrolling cancels selection.
+document.addEventListener("pointerdown", e => {
+  if (e.isPrimary === false || e.button !== 0 || e.target.closest("button")) return;
+  if (!e.target.closest(".board,#accessMenu")) return;
+  manual=false;
+  pointerPress={id:e.pointerId,x:e.clientX,y:e.clientY,cancelled:false};
+});
+document.addEventListener("pointermove", e => {
+  if (pointerPress && e.pointerId === pointerPress.id && Math.hypot(e.clientX-pointerPress.x,e.clientY-pointerPress.y)>12) pointerPress.cancelled=true;
+});
+document.addEventListener("pointerup", e => {
+  if (!pointerPress || e.pointerId !== pointerPress.id) return;
+  const cancelled=pointerPress.cancelled; pointerPress=null;
+  if (!cancelled) press();
+  resetTiming();
+});
+document.addEventListener("pointercancel", () => {pointerPress=null;resetTiming();});
+// Assistive devices may emit a click without a pointer sequence.
+document.addEventListener("click", e => {
+  if (e.detail === 0 && !e.target.closest("button") && e.target.closest(".board,#accessMenu")) press();
+});
+document.getElementById("menuButton").addEventListener("click", openMenu);
+function interrupt(){heldKey=null;pointerPress=null;if (panel.hidden) openMenu();resetTiming();}
+window.addEventListener("blur", interrupt);
+document.addEventListener("visibilitychange", () => {if(document.hidden) interrupt();else resetTiming();});
+window.addEventListener("focus", resetTiming);
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+renderChoices();
+G.st = { x:START[0].x, y:START[0].y, th:START[0].th };
+G.phase = "intro";
+elHintText.textContent = "Choose Start driving to begin.";
+openMenu();
+requestAnimationFrame(loop);
+
+// expose a tiny hook so automated checks can drive the game headlessly
+window.__abr = {
+  CFG: CFG, G: G, OPTIONS: OPTIONS,
+  press: press,
+  simulate: simulate,
+  isParked: isParked,
+  startRound: startRound
+};
+})();
+</script>
+</body>
+</html>

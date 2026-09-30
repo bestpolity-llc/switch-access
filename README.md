@@ -11,7 +11,7 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 
 - **AAC keyboard** with row-column scanning, word prediction, AI
 - **Calculator** with fractions and percentages
-- **8 games**: Pop It!, Pick One, Tap the Dot, Game Maker, Hellgate, Solitaire, Rift-Signal, and Drift-Signal
+- **9 games**: Pop It!, Pick One, Tap the Dot, Game Maker, Hellgate, Solitaire, Rift-Signal, Drift-Signal, and American Big Rigs
 - **Google sign-in** to sync settings and send feedback
 
 ## Pages
@@ -29,10 +29,11 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 | `games/solitaire.html` | Switch-accessible solitaire |
 | `games/rift-signal/` | Branching space adventure |
 | `games/drift-signal/` | Five-gear racing activity |
+| `games/american-big-rigs/` | Single-switch truck docking with move previews |
 
 ## Shelved staff workflow
 
-The public site focuses on Type, Calc, and the eight games. The staff portal,
+The public site focuses on Type, Calc, and the nine games. The staff portal,
 provider page, participant session runner, and provider demo documents were
 removed from the deployed source. Their last retained version is commit
 `6c8b0439afc283c223bc46ab23b1e904352629f9`; recover the files from Git history
