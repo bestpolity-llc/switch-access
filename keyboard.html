@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="shared/profile.js"></script>
+<script src="shared/switch-access.js"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SwitchMate — Type</title>
@@ -548,6 +551,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="switchmate-tracker.js"></script>
+<link rel="stylesheet" href="shared/switch-access.css">
 </head>
 <body>
 
@@ -580,93 +584,11 @@
 
 <button class="help-btn" id="helpBtn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
 
-<div class="help-overlay" id="helpOverlay">
-  <div class="help-box">
-    <h2>How To Use</h2>
-    <div class="help-section">
-      <div class="title">👆 Touch (iPad)</div>
-      <div class="help-row">
-        <span class="gesture">👆</span>
-        <span class="arrow">→</span>
-        <span class="desc">Tap <span class="desc-sub">quick</span></span>
-      </div>
-      <div class="help-row">
-        <span class="gesture">✋</span>
-        <span class="arrow">→</span>
-        <span class="desc">Hold <span class="desc-sub">2s</span></span>
-      </div>
-      <div class="help-row">
-        <span class="gesture">✋</span>
-        <span class="arrow">→</span>
-        <span class="desc">Hold <span class="desc-sub">10s</span></span>
-      </div>
-    </div>
-    <div class="help-section">
-      <div class="title">⌨️ Keyboard</div>
-      <div class="help-row">
-        <span class="gesture">␣/↵</span>
-        <span class="arrow">→</span>
-        <span class="desc">Select</span>
-      </div>
-      <div class="help-row">
-        <span class="gesture">Esc</span>
-        <span class="arrow">→</span>
-        <span class="desc">Back</span>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:12px">
-      <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a>
-    </div>
-    <button class="help-close" onclick="hideHelp()" aria-label="Close help">Got it</button>
-  </div>
-</div>
+
 
 <!-- Hold bar -->
 <div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
 <div class="hold-status" id="holdStatus"></div>
-
-<!-- Settings Dialog -->
-<div class="settings-dialog" id="settingsDialog">
-  <div class="settings-panel" id="settingsPanel"></div>
-</div>
-
-<!-- Caregiver quick-setup (touch/mouse only — not in scan loop) -->
-<button class="cg-btn" id="cgBtn" onclick="openCaregiver()" title="Caregiver setup" aria-label="Caregiver setup">🛠</button>
-<div class="cg-overlay" id="cgOverlay">
-  <div class="cg-panel">
-    <h3>🛠 Caregiver Setup</h3>
-    <div class="sub">Quick settings — changes apply instantly</div>
-
-    <div class="cg-row">
-      <div class="lbl"><span>Scan speed</span><span class="cur" id="cgSpeedVal"></span></div>
-      <div class="cg-presets" id="cgSpeedPresets">
-        <button data-ms="2500">🐢 Relaxed<br>2.5s</button>
-        <button data-ms="1800">🚶 Steady<br>1.8s</button>
-        <button data-ms="1200">🏃 Quick<br>1.2s</button>
-        <button data-ms="800">⚡ Fast<br>0.8s</button>
-      </div>
-      <input type="range" class="cg-slider" id="cgSpeedSlider" min="500" max="4000" step="100">
-    </div>
-
-    <div class="cg-row">
-      <div class="lbl"><span>Hold to cancel</span><span class="cur" id="cgHoldVal"></span></div>
-      <input type="range" class="cg-slider" id="cgHoldSlider" min="1" max="5" step="0.5">
-    </div>
-
-    <div class="cg-toggle" id="cgDark" onclick="cgToggle('dark')">
-      <span>🌙 Dark mode</span><span class="state">OFF</span>
-    </div>
-    <div class="cg-toggle" id="cgSpeak" onclick="cgToggle('speak')">
-      <span>🔊 Speak letters</span><span class="state">OFF</span>
-    </div>
-    <div class="cg-toggle" id="cgStats" onclick="cgToggle('stats')">
-      <span>📊 Anonymous usage stats</span><span class="state">ON</span>
-    </div>
-    <div class="sub" style="margin:-4px 0 12px">Helps us improve SwitchMate. Typing &amp; predictions always stay on this device. <a href="privacy.html" style="color:#764ba2">Privacy</a></div>
-
-    <button class="cg-close" onclick="closeCaregiver()">✓ Done</button>
-  </div>
-</div>
 
 <script src="predict-data.js"></script>
 <script src="predict.js"></script>
@@ -686,10 +608,6 @@ const state = {
   predictionIndex: -1,
   aiEnabled: false,
   speakOnType: false,
-  holdCancel: 2,
-  holdExit: 10,
-  inSettings: false,
-  settingsCursor: 0,
   scanTimer: null,
 };
 
@@ -739,28 +657,28 @@ function getPredictions(prefix, maxResults = 3) {
 // RENDER
 // ============================================================
 function renderKeyboard() {
-  const kb = document.getElementById('keyboard');
-  const layer = LAYERS[state.layer];
-  let html = '';
-  for (let r = 0; r < layer.keys.length; r++) {
-    for (let c = 0; c < layer.keys[r].length; c++) {
-      const ch = layer.keys[r][c];
-      const cls = ['key'];
-      if (state.scanMode === 'row' && state.currentRow === r) cls.push('scan-row');
-      else if (state.scanMode === 'col' && state.selectedRow === r && state.currentCol === c) cls.push('scan-col');
-      html += `<div class="${cls.join(' ')}" onclick="pressKey('${ch}')">${ch}</div>`;
-    }
-  }
-  html += `<div class="key action ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="pressKey('BACKSPACE')">⌫</div>`;
-  html += `<div class="key action space ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="pressKey(' ')">Space</div>`;
-  html += `<div class="key action ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="pressKey('ENTER')">↵</div>`;
-  html += `<div class="key action ${state.scanMode === 'row' && state.currentRow === layer.keys.length ? 'scan-row' : ''}" onclick="openSettings()">⚙</div>`;
-  kb.innerHTML = html;
+  const kb=document.getElementById('keyboard');
+  kb.replaceChildren();
+  const rows=[...LAYERS[state.layer].keys.map(row=>row.map(ch=>({label:ch,run:()=>pressKey(ch)}))),
+    [{label:'⌫',run:doBackspace},{label:'Space',run:()=>typeChar(' ')},{label:'Enter',run:()=>typeChar('\n')},{label:'Settings',run:openSettings}],
+    utilityKeys()];
+  rows.forEach((row,r)=>row.forEach((item,c)=>{
+    const button=document.createElement('button');button.type='button';button.className='key';button.textContent=item.label;
+    if(r===layerRows()&&c===1)button.classList.add('space');
+    button.classList.toggle('scan-row',state.scanMode==='row'&&state.currentRow===r);
+    button.classList.toggle('scan-col',state.scanMode==='col'&&state.selectedRow===r&&state.currentCol===c);
+    button.addEventListener('click',item.run);kb.append(button);
+  }));
 }
 
+function utilityKeys(){
+  const words=getPredictions(getCurrentWord(),3);
+  return [{label:'Speak message',run:speakText},{label:'Change keyboard',run:()=>{const layers=Object.keys(LAYERS);switchLayer(layers[(layers.indexOf(state.layer)+1)%layers.length]);}},
+    ...[0,1,2].map(i=>({label:words[i]||'No prediction',run:()=>{if(words[i])acceptPrediction(words[i]);}})),{label:'Switch settings',run:()=>SwitchAccess.open()}];
+}
 function layerRows() { return LAYERS[state.layer].rows; }
 function layerCols() { return LAYERS[state.layer].cols; }
-function totalRows() { return layerRows() + 1; }
+function totalRows() { return layerRows() + 2; }
 
 // ============================================================
 // SCAN ENGINE
@@ -775,7 +693,8 @@ function nextScanStep() {
     state.currentCol = (state.currentCol + 1) % cols;
   }
   updateUI();
-  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+  SwitchAccess.announce([...document.querySelectorAll('.key.scan-row,.key.scan-col')].map(b=>b.textContent).join(', '));
+  state.scanTimer = SwitchAccess.scanClock.setTimeout(nextScanStep, state.scanSpeed);
 }
 
 function startScan() {
@@ -786,12 +705,13 @@ function startScan() {
   state.currentCol = 0;
   state.selectedRow = -1;
   updateUI();
-  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+  SwitchAccess.announce([...document.querySelectorAll('.key.scan-row,.key.scan-col')].map(b=>b.textContent).join(', '));
+  state.scanTimer = SwitchAccess.scanClock.setTimeout(nextScanStep, state.scanSpeed);
 }
 
 function stopScan() {
   state.scanning = false;
-  if (state.scanTimer) { clearTimeout(state.scanTimer); state.scanTimer = null; }
+  if (state.scanTimer) { SwitchAccess.scanClock.clearTimeout(state.scanTimer); state.scanTimer = null; }
   updateUI();
 }
 
@@ -799,8 +719,6 @@ function stopScan() {
 // SELECTION
 // ============================================================
 function selectCurrent() {
-  // Settings mode
-  if (state.inSettings) { selectSettingsOption(); return; }
 
   if (!state.scanning) { startScan(); return; }
 
@@ -818,6 +736,8 @@ function selectCurrent() {
     if (row < layerRows()) {
       const ch = LAYERS[state.layer].keys[row][col];
       if (ch) typeChar(ch);
+    } else if(row>layerRows()){
+      utilityKeys()[col]?.run();
     } else {
       const actions = ['BACKSPACE', ' ', 'ENTER', 'SETTINGS'];
       const action = actions[col] || ' ';
@@ -977,6 +897,7 @@ function speakText() {
   }
 }
 function speakChar(ch) {
+  if(!SwitchAccess.access.sound)return;
   if ('speechSynthesis' in window) {
     const u = new SpeechSynthesisUtterance(ch === ' ' ? 'space' : ch);
     u.rate = 0.9; u.volume = 0.3;
@@ -1004,146 +925,18 @@ function switchLayer(layer) {
 // SETTINGS
 // ============================================================
 function loadSettings() {
-  const speed = localStorage.getItem('switchaac_speed');
-  if (speed) state.scanSpeed = parseInt(speed);
-  if (localStorage.getItem('switchaac_ai') === '1') state.aiEnabled = true;
-  if (localStorage.getItem('switchaac_speak') === '1') state.speakOnType = true;
-  state.holdCancel = parseFloat(localStorage.getItem('switchaac_holdCancel')) || 2;
-  state.holdExit = parseInt(localStorage.getItem('switchaac_holdExit')) || 10;
-  if (localStorage.getItem('switchaac_dark') === '1') document.body.classList.add('dark');
+  state.scanSpeed=SwitchAccess.access.scanMs;
 }
 
 function saveSettings() {
-  localStorage.setItem('switchaac_speed', state.scanSpeed);
-  localStorage.setItem('switchaac_ai', state.aiEnabled ? '1' : '0');
-  localStorage.setItem('switchaac_speak', state.speakOnType ? '1' : '0');
-  localStorage.setItem('switchaac_holdCancel', state.holdCancel);
-  localStorage.setItem('switchaac_dark', document.body.classList.contains('dark') ? '1' : '0');
-  localStorage.setItem('switchaac_holdExit', state.holdExit);
+  SwitchAccess.setApp({aiEnabled:state.aiEnabled,speakOnType:state.speakOnType,dark:document.body.classList.contains('dark')});
 }
 
 // ============================================================
-// SETTINGS DIALOG — scanable via single switch
-// ============================================================
-function openSettings() {
-  stopScan();
-  state.inSettings = true;
-  state.settingsCursor = 0;
-  renderSettings();
-  document.getElementById('settingsDialog').classList.add('active');
-  setTimeout(() => highlightSetting(0), 50);
-  startSettingsScan();
-}
+// Settings are shared with every activity.
+function openSettings(){SwitchAccess.open('activity');}
+function openCaregiver(){SwitchAccess.open();}
 
-function closeSettings() {
-  state.inSettings = false;
-  stopSettingsScan();
-  document.getElementById('settingsDialog').classList.remove('active');
-  startScan();
-}
-
-function renderSettings() {
-  const s = state;
-  document.getElementById('settingsPanel').innerHTML = `
-    <h3>Settings</h3>
-    <div class="setting-opt" data-action="speed-down" onclick="adjustSpeed(200)">
-      <span class="lbl">🐢 Slower</span>
-      <span class="val">${(s.scanSpeed / 1000).toFixed(1)}s</span>
-    </div>
-    <div class="setting-opt" data-action="speed-up" onclick="adjustSpeed(-200)">
-      <span class="lbl">🐇 Faster</span>
-      <span class="val">${(s.scanSpeed / 1000).toFixed(1)}s</span>
-    </div>
-    <div class="setting-opt ${s.speakOnType ? 'on' : 'off'}" data-action="toggle-speak" onclick="toggleSpeak()">
-      <span class="lbl">Sound</span>
-      <span class="val">${s.speakOnType ? 'ON' : 'OFF'}</span>
-    </div>
-    <div class="setting-opt ${s.aiEnabled ? 'on' : 'off'}" data-action="toggle-ai" onclick="toggleAI()">
-      <span class="lbl">AI Predict</span>
-      <span class="val">${s.aiEnabled ? 'ON' : 'OFF'}</span>
-    </div>
-    <div class="setting-opt" data-action="back" onclick="closeSettings()">
-      <span class="lbl">← Back</span>
-      <span class="val"></span>
-    </div>
-  `;
-}
-
-function getSettingOpts() {
-  return document.querySelectorAll('#settingsPanel .setting-opt');
-}
-
-function highlightSetting(idx) {
-  const opts = getSettingOpts();
-  opts.forEach((o, i) => o.classList.toggle('scanning', i === idx));
-  state.settingsCursor = idx;
-}
-
-let settingsScanTimer = null;
-function startSettingsScan() {
-  stopSettingsScan();
-  const speed = Math.min(state.scanSpeed, 1500);
-  settingsScanTimer = setInterval(() => {
-    if (!state.inSettings) { stopSettingsScan(); return; }
-    const opts = getSettingOpts();
-    if (opts.length === 0) return;
-    highlightSetting((state.settingsCursor + 1) % opts.length);
-  }, speed);
-}
-
-function stopSettingsScan() {
-  if (settingsScanTimer) { clearInterval(settingsScanTimer); settingsScanTimer = null; }
-}
-
-function selectSettingsOption() {
-  const opts = getSettingOpts();
-  if (opts.length === 0) return;
-  const active = opts[state.settingsCursor];
-  if (!active) return;
-  const action = active.dataset.action;
-  if (action === 'back') { closeSettings(); return; }
-  active.click();
-}
-
-function adjustSpeed(delta) {
-  state.scanSpeed = Math.max(500, Math.min(4000, state.scanSpeed + delta));
-  const opts = getSettingOpts();
-  opts.forEach(o => {
-    if (o.dataset.action === 'speed-down' || o.dataset.action === 'speed-up')
-      o.querySelector('.val').textContent = (state.scanSpeed / 1000).toFixed(1) + 's';
-  });
-  saveSettings();
-}
-
-function toggleSpeak() {
-  state.speakOnType = !state.speakOnType;
-  const opts = getSettingOpts();
-  opts.forEach(o => {
-    if (o.dataset.action === 'toggle-speak') {
-      o.classList.toggle('on', state.speakOnType);
-      o.classList.toggle('off', !state.speakOnType);
-      o.querySelector('.val').textContent = state.speakOnType ? 'ON' : 'OFF';
-    }
-  });
-  saveSettings();
-}
-
-function toggleAI() {
-  state.aiEnabled = !state.aiEnabled;
-  if (state.aiEnabled && !aiSession) createAISession();
-  else if (!state.aiEnabled) destroyAISession();
-  const opts = getSettingOpts();
-  opts.forEach(o => {
-    if (o.dataset.action === 'toggle-ai') {
-      o.classList.toggle('on', state.aiEnabled);
-      o.classList.toggle('off', !state.aiEnabled);
-      o.querySelector('.val').textContent = state.aiEnabled ? 'ON' : 'OFF';
-    }
-  });
-  saveSettings();
-}
-
-// ============================================================
 // UI UPDATES
 // ============================================================
 function updateUI() {
@@ -1161,186 +954,10 @@ function updateUI() {
 function updateText() { document.getElementById('textDisplay').textContent = state.text || ''; }
 
 // ============================================================
-// KEYBOARD INPUT
-// ============================================================
-document.addEventListener('keydown', (e) => {
-  const cgOpen = document.getElementById('cgOverlay').classList.contains('show');
-  if (e.key === 'Escape') {
-    if (cgOpen) { closeCaregiver(); return; }
-    if (state.inSettings) { closeSettings(); return; }
-    window.location.href = 'index.html';
-    return;
-  }
-  if (cgOpen) return; // caregiver is typing/adjusting — don't treat keys as switch
-  // Any other key = trigger select
-  e.preventDefault();
-  if (state.inSettings) { selectSettingsOption(); return; }
-  if (!state.scanning) { startScan(); return; }
-  selectCurrent();
-});
-
-// ============================================================
-// CAREGIVER PANEL — direct touch/mouse, outside the scan loop
-// ============================================================
-function cgRefresh() {
-  document.getElementById('cgSpeedVal').textContent = (state.scanSpeed / 1000).toFixed(1) + 's per step';
-  document.getElementById('cgSpeedSlider').value = state.scanSpeed;
-  document.querySelectorAll('#cgSpeedPresets button').forEach(b =>
-    b.classList.toggle('sel', parseInt(b.dataset.ms) === state.scanSpeed));
-  document.getElementById('cgHoldVal').textContent = state.holdCancel + 's';
-  document.getElementById('cgHoldSlider').value = state.holdCancel;
-  const dark = document.body.classList.contains('dark');
-  document.getElementById('cgDark').classList.toggle('on', dark);
-  document.getElementById('cgDark').querySelector('.state').textContent = dark ? 'ON' : 'OFF';
-  document.getElementById('cgSpeak').classList.toggle('on', state.speakOnType);
-  document.getElementById('cgSpeak').querySelector('.state').textContent = state.speakOnType ? 'ON' : 'OFF';
-  const stats = localStorage.getItem('switchaac_analytics') !== '0';
-  document.getElementById('cgStats').classList.toggle('on', stats);
-  document.getElementById('cgStats').querySelector('.state').textContent = stats ? 'ON' : 'OFF';
-}
-
-function openCaregiver() {
-  stopScan();
-  document.getElementById('cgOverlay').classList.add('show');
-  cgRefresh();
-}
-
-function closeCaregiver() {
-  document.getElementById('cgOverlay').classList.remove('show');
-  saveSettings();
-  startScan();
-}
-
-function cgToggle(which) {
-  if (which === 'dark') document.body.classList.toggle('dark');
-  else if (which === 'speak') state.speakOnType = !state.speakOnType;
-  else if (which === 'stats') {
-    const off = localStorage.getItem('switchaac_analytics') === '0';
-    localStorage.setItem('switchaac_analytics', off ? '1' : '0');
-  }
-  saveSettings();
-  cgRefresh();
-}
-
-document.getElementById('cgSpeedPresets').addEventListener('click', e => {
-  const ms = e.target.closest('button')?.dataset.ms;
-  if (ms) { state.scanSpeed = parseInt(ms); saveSettings(); cgRefresh(); }
-});
-document.getElementById('cgSpeedSlider').addEventListener('input', e => {
-  state.scanSpeed = parseInt(e.target.value); saveSettings(); cgRefresh();
-});
-document.getElementById('cgHoldSlider').addEventListener('input', e => {
-  state.holdCancel = parseFloat(e.target.value); saveSettings(); cgRefresh();
-});
-
-// ============================================================
-// FULL-SCREEN TOUCH SWITCH
-// ============================================================
-let touchStart = 0, holdInt = null, holdFired = false;
-
-document.documentElement.addEventListener('touchstart', function(e) {
-  if (touchStart) return;
-  // Let buttons work normally
-  if (e.target.closest('button') || e.target.closest('.settings-panel') || e.target.closest('.layers') || e.target.closest('.cg-panel')) return;
-  // Skip keyboard keys (they have their own click handlers)
-  if (e.target.closest('.key') || e.target.closest('.pred-btn')) return;
-
-  e.preventDefault();
-  touchStart = Date.now(); holdFired = false;
-  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
-
-  holdInt = setInterval(() => {
-    const elapsed = (Date.now() - touchStart) / 1000;
-    const fill = document.getElementById('holdFill');
-    fill.style.width = Math.min(100, (elapsed / state.holdExit) * 100) + '%';
-    const status = document.getElementById('holdStatus');
-    if (elapsed >= state.holdExit && !holdFired) {
-      holdFired = true; clearInterval(holdInt); holdInt = null;
-      fill.style.width = '100%'; status.textContent = '×'; status.classList.add('show');
-      setTimeout(() => { window.location.href = 'index.html'; }, 300);
-    } else if (elapsed >= state.holdCancel && !holdFired) {
-      status.textContent = 'Hold...'; status.classList.add('show');
-    }
-  }, 50);
-}, { passive: false });
-
-document.documentElement.addEventListener('touchend', function(e) {
-  if (!touchStart) return;
-  const elapsed = (Date.now() - touchStart) / 1000;
-  touchStart = 0;
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
-  fill.style.width = '0%'; status.classList.remove('show');
-  if (holdFired) { holdFired = false; return; }
-  if (elapsed >= state.holdCancel) {
-    // Cancel: stop if scanning, or reset
-    status.textContent = '×'; status.classList.add('show');
-    setTimeout(() => status.classList.remove('show'), 500);
-    if (state.inSettings) { closeSettings(); return; }
-    stopScan();
-  } else {
-    // Quick tap = select
-    if (state.inSettings) { selectSettingsOption(); return; }
-    if (!state.scanning) { startScan(); return; }
-    selectCurrent();
-  }
-}, { passive: true });
-
-document.documentElement.addEventListener('touchcancel', function(e) {
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  touchStart = 0;
-  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
-  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
-}, { passive: true });
-
-// ============================================================
 // HELP OVERLAY
 // ============================================================
-function showHelp() {
-  document.getElementById('helpOverlay').classList.add('show');
-}
-function hideHelp() {
-  document.getElementById('helpOverlay').classList.remove('show');
-}
-
-// ============================================================
-// FIREBASE AUTH — save/load settings
-// ============================================================
-// Auth-aware: when user signs in, load cloud prefs and merge
-// When settings change while signed in, save to cloud
-
-const origSaveSettings = saveSettings;
-saveSettings = function() {
-  origSaveSettings();
-  if (currentUser) {
-    saveFirebasePrefs(currentUser.uid, {
-      scanSpeed: state.scanSpeed,
-      aiEnabled: state.aiEnabled,
-      speakOnType: state.speakOnType,
-      holdCancel: state.holdCancel,
-      holdExit: state.holdExit
-    });
-  }
-};
-
-// Listen for auth state
-let prefsLoaded = false;
-onAuthChange(async (user) => {
-  if (user && !prefsLoaded) {
-    prefsLoaded = true;
-    const cloudPrefs = await loadFirebasePrefs(user.uid);
-    if (cloudPrefs) {
-      if (cloudPrefs.scanSpeed) state.scanSpeed = cloudPrefs.scanSpeed;
-      if (cloudPrefs.aiEnabled !== undefined) state.aiEnabled = cloudPrefs.aiEnabled;
-      if (cloudPrefs.speakOnType !== undefined) state.speakOnType = cloudPrefs.speakOnType;
-      if (cloudPrefs.holdCancel) state.holdCancel = cloudPrefs.holdCancel;
-      if (cloudPrefs.holdExit) state.holdExit = cloudPrefs.holdExit;
-      saveSettings();
-      // Restart scan with new speed
-      if (state.scanning) { startScan(); }
-    }
-  }
-});
+function showHelp() { SwitchAccess.open(); }
+function hideHelp() { SwitchAccess.close(); }
 
 // ============================================================
 // INIT
@@ -1349,6 +966,13 @@ loadSettings();
 renderKeyboard();
 updateText();
 startScan();
+
+SwitchAccess.register({id:'type',home:'index.html',activate:selectCurrent,
+  settings:{aiEnabled:{label:'AI word prediction',values:[false,true],default:false},speakOnType:{label:'Speak typed characters',values:[false,true],default:false},dark:{label:'Dark theme',values:[false,true],default:false}},
+  legacy:{aiEnabled:SwitchAccess.storage.getItem('switchaac_ai')==='1',speakOnType:SwitchAccess.storage.getItem('switchaac_speak')==='1',dark:SwitchAccess.storage.getItem('switchaac_dark')==='1'},
+  apply(a,p){state.scanSpeed=a.scanMs;state.aiEnabled=p.aiEnabled;state.speakOnType=p.speakOnType;document.body.classList.toggle('dark',p.dark);if(state.aiEnabled&&!aiSession)createAISession();if(!state.aiEnabled&&aiSession)destroyAISession();if(state.scanning){SwitchAccess.scanClock.clearTimeout(state.scanTimer);state.scanTimer=SwitchAccess.scanClock.setTimeout(nextScanStep,a.scanMs);}updateUI();},
+  actions:[{label:'Speak message',run:speakText}]
+});
 </script>
 
 </body>

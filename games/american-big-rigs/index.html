@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="../../shared/profile.js"></script>
+<script src="../../shared/switch-access.js"></script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>American Big Rigs — SwitchMate</title>
@@ -336,6 +339,7 @@
     .footer{font-size:14px}
   }
 </style>
+<link rel="stylesheet" href="../../shared/switch-access.css">
 </head>
 <body>
 <div class="app">
@@ -392,7 +396,7 @@ const CFG = {
 };
 const SETTINGS_KEY = "switchmate.american-big-rigs.settings.v1";
 try {
-  const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || localStorage.getItem("abr-cfg") || "null");
+  const saved = JSON.parse(SwitchAccess.storage.getItem(SETTINGS_KEY) || SwitchAccess.storage.getItem("abr-cfg") || "null");
   if (saved && typeof saved === "object") {
     if (Number.isFinite(saved.scanMs)) CFG.scanMs = Math.max(800, Math.min(5000, saved.scanMs));
     if (Number.isInteger(saved.rounds)) CFG.rounds = Math.max(1, Math.min(5, saved.rounds));
@@ -400,7 +404,7 @@ try {
   }
 } catch(e){}
 function saveCfg(){
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(CFG)); } catch(e){}
+  try { SwitchAccess.storage.setItem(SETTINGS_KEY, JSON.stringify(CFG)); } catch(e){}
 }
 
 /* ============================================================
@@ -480,8 +484,8 @@ const sfx = {
   pick:  function(){ tone(440, 130, 0.06, "triangle"); },
   step:  function(){ tone(220, 160, 0.045, "sine"); },
   bump:  function(){ tone(150, 260, 0.05, "sine"); },
-  good:  function(){ [523,659,784].forEach(function(f,i){ setTimeout(function(){ tone(f,240,0.06,"sine"); }, i*110); }); },
-  win:   function(){ [523,659,784,1046,1318].forEach(function(f,i){ setTimeout(function(){ tone(f,320,0.07,"sine"); }, i*130); }); }
+  good:  function(){ [523,659,784].forEach(function(f,i){ SwitchAccess.clock.setTimeout(function(){ tone(f,240,0.06,"sine"); }, i*110); }); },
+  win:   function(){ [523,659,784,1046,1318].forEach(function(f,i){ SwitchAccess.clock.setTimeout(function(){ tone(f,320,0.07,"sine"); }, i*130); }); }
 };
 
 /* ============================================================
@@ -553,6 +557,7 @@ function announceScan(){
   if (G.hl === lastAnnounced) return;
   lastAnnounced = G.hl;
   elLive.textContent = "Choice: " + OPTIONS[G.hl].label;
+  SwitchAccess.announce(OPTIONS[G.hl].label);
   if (G.phase === "scan") sfx.tick();
 }
 
@@ -591,8 +596,8 @@ function coach(){
 function toast(msg, ms){
   elToast.textContent = msg;
   elToast.classList.add("show");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(function(){ elToast.classList.remove("show"); }, ms || 1600);
+  SwitchAccess.clock.clearTimeout(toast._t);
+  toast._t = SwitchAccess.clock.setTimeout(function(){ elToast.classList.remove("show"); }, ms || 1600);
 }
 
 /* ============================================================
@@ -608,7 +613,7 @@ function startRound(i){
   G.from = null; G.to = null;
   G.phase = "scan";
   G.hl = 0; lastAnnounced = -1;
-  G.scanT0 = performance.now();
+  G.scanT0 = SwitchAccess.clock.now();
   panel.hidden = true;
   document.querySelector(".app").inert = false;
   updateHud();
@@ -619,7 +624,7 @@ function startRound(i){
 
 function beginScan(){
   G.phase = "scan";
-  G.scanT0 = performance.now();
+  G.scanT0 = SwitchAccess.clock.now();
   lastAnnounced = -1;
   renderChoices();
   announceScan();
@@ -627,17 +632,17 @@ function beginScan(){
 }
 
 function press(selected){
-  if (document.hidden || performance.now() - lastActivation < 450) return;
+  if (document.hidden) return;
   if (!panel.hidden) {
     const i = Number.isInteger(selected) ? selected : panelIndex;
     if (!panelItems[i]) return;
-    lastActivation = performance.now();
+    lastActivation = SwitchAccess.clock.now();
     panelItems[i].run();
     return;
   }
   if (G.phase !== "scan") return;
   if (Number.isInteger(selected)) G.hl = selected;
-  lastActivation = performance.now();
+  lastActivation = SwitchAccess.clock.now();
   if (OPTIONS[G.hl].menu) { openMenu(); return; }
 
   const opt = OPTIONS[G.hl];
@@ -645,7 +650,7 @@ function press(selected){
   G.steps++;
   G.from = { x:G.st.x, y:G.st.y, th:G.st.th };
   G.to = simulate(G.st, opt);
-  G.t0 = performance.now();
+  G.t0 = SwitchAccess.clock.now();
   G.phase = "moving";
   renderChoices();
   updateHud();
@@ -917,7 +922,7 @@ function currentState(){
   if (!G.st) return null;
   if (G.phase === "paused" && pausedState) return pausedState;
   if (G.phase === "moving" && G.from && G.to){
-    let p = (performance.now() - G.t0) / CFG.moveMs;
+    let p = (SwitchAccess.clock.now() - G.t0) / CFG.moveMs;
     if (p < 0) p = 0;
     if (p > 1) p = 1;
     const e = 1 - Math.pow(1 - p, 3); // ease-out cubic
@@ -934,6 +939,9 @@ function currentState(){
    MAIN LOOP
    ============================================================ */
 function loop(now){
+  now=SwitchAccess.clock.now();
+  manual=SwitchAccess.manual;
+  if(SwitchAccess.paused){requestAnimationFrame(loop);return;}
   if (document.hidden) { requestAnimationFrame(loop); return; }
   if (!panel.hidden && !manual && !heldKey && !pointerPress && now - panelT0 >= CFG.scanMs) {
     panelIndex = (panelIndex + 1) % panelItems.length;
@@ -964,6 +972,7 @@ function loop(now){
    SWITCH-ACCESSIBLE MENUS AND INPUT
    ============================================================ */
 function highlightPanel(){
+  SwitchAccess.announce(panelItems[panelIndex]?.label||'');
   if (panel.hidden) return;
   Array.from(menuActions.children).forEach((button, i) => {
     button.classList.toggle("scan", !manual && i === panelIndex);
@@ -980,7 +989,7 @@ function showPanel(title, description, items, keepIndex){
   document.getElementById("menuText").textContent = description;
   panelItems = items;
   panelIndex = keepIndex ? Math.min(panelIndex, items.length - 1) : 0;
-  panelT0 = performance.now();
+  panelT0 = SwitchAccess.clock.now();
   menuActions.replaceChildren();
   items.forEach((item, i) => {
     const button = document.createElement("button");
@@ -998,8 +1007,8 @@ function resume(){
   panel.hidden = true;
   document.querySelector(".app").inert = false;
   G.phase = pausedPhase;
-  if (G.phase === "moving") G.t0 += performance.now() - pausedAt;
-  G.scanT0 = performance.now();
+  if (G.phase === "moving") G.t0 += SwitchAccess.clock.now() - pausedAt;
+  G.scanT0 = SwitchAccess.clock.now();
   renderChoices();
   if (manual) choiceEls[G.hl].focus();
 }
@@ -1007,7 +1016,7 @@ function openMenu(){
   if (panel.hidden || G.phase !== "paused") {
     pausedPhase = G.phase;
     pausedState = currentState();
-    pausedAt = performance.now();
+    pausedAt = SwitchAccess.clock.now();
     G.phase = "paused";
     renderChoices();
   }
@@ -1032,65 +1041,10 @@ function openMenu(){
   showPanel(title, text, items);
 }
 function showSettings(keepIndex){
-  const update = fn => {fn(); saveCfg(); showSettings(true);};
-  showPanel("Your settings", "Choose a setting to change it. Number of docks applies to the next run.", [
-    {label:"Slower: " + (CFG.scanMs/1000).toFixed(1) + " seconds",run:() => update(() => {CFG.scanMs=Math.min(5000,CFG.scanMs+200);})},
-    {label:"Faster: " + (CFG.scanMs/1000).toFixed(1) + " seconds",run:() => update(() => {CFG.scanMs=Math.max(800,CFG.scanMs-200);})},
-    {label:"Docks next run: " + CFG.rounds,run:() => update(() => {CFG.rounds=CFG.rounds%5+1;})},
-    {label:"Move preview: " + (CFG.preview?"on":"off"),run:() => update(() => {CFG.preview=!CFG.preview;})},
-    {label:"Sounds: " + (CFG.sound?"on":"off"),run:() => update(() => {CFG.sound=!CFG.sound;})},
-    {label:"Coaching hints: " + (CFG.hints?"on":"off"),run:() => update(() => {CFG.hints=!CFG.hints; coach();})},
-    {label:"Back",run:openMenu}
-  ], keepIndex);
+  SwitchAccess.open('activity');
 }
-function resetTiming(){ G.scanT0=performance.now(); panelT0=performance.now(); }
-function isSwitchKey(e){return ["Space","Enter","NumpadEnter"].includes(e.code) || e.key === " " || e.key === "Enter";}
-window.addEventListener("keydown", e => {
-  if (e.key === "Tab") { manual=true; renderChoices(); highlightPanel(); return; }
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if ((e.code === "KeyS" || e.key === "Escape") && !e.repeat) {
-    e.preventDefault(); heldKey=null; openMenu();
-    if (e.code === "KeyS") showSettings();
-    return;
-  }
-  if (!isSwitchKey(e)) return;
-  if (manual && e.target.closest("button")) return;
-  e.preventDefault();
-  if (e.repeat || heldKey) return;
-  manual=false; heldKey=e.code || e.key;
-  renderChoices(); highlightPanel();
-});
-window.addEventListener("keyup", e => {
-  if (!heldKey || heldKey !== (e.code || e.key)) return;
-  e.preventDefault(); heldKey=null; press(); resetTiming();
-});
-// A stationary primary pointer on the board or menu background acts as a switch.
-// Button taps activate their labels directly; dragging/scrolling cancels selection.
-document.addEventListener("pointerdown", e => {
-  if (e.isPrimary === false || e.button !== 0 || e.target.closest("button")) return;
-  if (!e.target.closest(".board,#accessMenu")) return;
-  manual=false;
-  pointerPress={id:e.pointerId,x:e.clientX,y:e.clientY,cancelled:false};
-});
-document.addEventListener("pointermove", e => {
-  if (pointerPress && e.pointerId === pointerPress.id && Math.hypot(e.clientX-pointerPress.x,e.clientY-pointerPress.y)>12) pointerPress.cancelled=true;
-});
-document.addEventListener("pointerup", e => {
-  if (!pointerPress || e.pointerId !== pointerPress.id) return;
-  const cancelled=pointerPress.cancelled; pointerPress=null;
-  if (!cancelled) press();
-  resetTiming();
-});
-document.addEventListener("pointercancel", () => {pointerPress=null;resetTiming();});
-// Assistive devices may emit a click without a pointer sequence.
-document.addEventListener("click", e => {
-  if (e.detail === 0 && !e.target.closest("button") && e.target.closest(".board,#accessMenu")) press();
-});
+function resetTiming(){ G.scanT0=SwitchAccess.clock.now(); panelT0=SwitchAccess.clock.now(); }
 document.getElementById("menuButton").addEventListener("click", openMenu);
-function interrupt(){heldKey=null;pointerPress=null;if (panel.hidden) openMenu();resetTiming();}
-window.addEventListener("blur", interrupt);
-document.addEventListener("visibilitychange", () => {if(document.hidden) interrupt();else resetTiming();});
-window.addEventListener("focus", resetTiming);
 
 /* ============================================================
    BOOT
@@ -1110,6 +1064,10 @@ window.__abr = {
   isParked: isParked,
   startRound: startRound
 };
+SwitchAccess.register({id:'american-big-rigs',home:'../../',activate:()=>{press();resetTiming();},resume:resetTiming,
+ settings:{rounds:{label:'Docks next run',values:[1,2,3,4,5],default:3},preview:{label:'Move preview',values:[true,false],default:true},hints:{label:'Coaching hints',values:[true,false],default:true}},legacy:CFG,
+ apply(a,p){Object.assign(CFG,p,{scanMs:a.scanMs,sound:a.sound});resetTiming();}
+});
 })();
 </script>
 </body>

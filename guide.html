@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="shared/profile.js"></script>
+<script src="shared/switch-access.js"></script>
+<link rel="stylesheet" href="shared/switch-access.css">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SwitchMate — Guide</title>
-<meta name="description" content="Learn how SwitchMate works: tap, hold, or press any key to use the tools with a single switch.">
+<meta name="description" content="Learn how SwitchMate works: tap, hold, or press your switch to use the tools with a single switch.">
 <meta name="theme-color" content="#4A7BC4">
 <!-- Open Graph / Facebook / Twitter -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SwitchMate">
 <meta property="og:title" content="SwitchMate — Guide">
-<meta property="og:description" content="Learn how SwitchMate works: tap, hold, or press any key to use the tools with a single switch.">
+<meta property="og:description" content="Learn how SwitchMate works: tap, hold, or press your switch to use the tools with a single switch.">
 <meta property="og:url" content="https://switch.bestpolity.com/guide.html">
 <meta property="og:image" content="https://switch.bestpolity.com/switchmate-share-v2.png">
 <meta property="og:image:alt" content="SwitchMate — single-switch tools and games. Free to use.">
@@ -19,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SwitchMate — Guide">
-<meta name="twitter:description" content="Learn how SwitchMate works: tap, hold, or press any key to use the tools with a single switch.">
+<meta name="twitter:description" content="Learn how SwitchMate works: tap, hold, or press your switch to use the tools with a single switch.">
 <meta name="twitter:image" content="https://switch.bestpolity.com/switchmate-share-v2.png">
 <!-- PWA -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -215,10 +218,10 @@
   <h2>Welcome to Switch Access</h2>
   <p>
     These tools let someone use a computer or iPad with <strong>just one switch</strong>.
-    A switch can be a button, a tap, or any key on a keyboard.
+    A switch can be a button, a tap, or Space or Enter on a keyboard.
   </p>
   <div class="demo-box" style="margin-top:20px;border-color:#EFEADE;background:#4A7BC4;color:#fff">
-    <div class="demo-label" style="color:#fff">Tap or press any key to continue</div>
+    <div class="demo-label" style="color:#fff">Tap or press your switch to continue</div>
   </div>
 </div>
 
@@ -226,7 +229,7 @@
 <div class="slide" id="slide1">
   <div class="icon">👆</div>
   <h2>On iPad (Touch)</h2>
-  <p>The whole screen is your switch. No hunting for buttons.<br><br></p>
+  <p>The page background is your switch by default. You can choose the bottom quarter or keyboard-only input in Switch settings.<br><br></p>
   <div class="demo-box">
     <div class="demo-icon">👆</div>
     <div class="demo-label">Quick Tap</div>
@@ -235,12 +238,12 @@
   <div class="demo-box" style="border-color:#C8934A">
     <div class="demo-icon">✋</div>
     <div class="demo-label" style="color:#C8934A">Hold 2 Seconds</div>
-    <div class="demo-sub">→ Cancel / Go back</div>
+    <div class="demo-sub">→ Open Switch settings (default hold time)</div>
   </div>
   <div class="demo-box" style="border-color:#d44">
     <div class="demo-icon">✋</div>
-    <div class="demo-label" style="color:#d44">Hold 10 Seconds</div>
-    <div class="demo-sub">→ Go to the main menu</div>
+    <div class="demo-label" style="color:#d44">Return to the library</div>
+    <div class="demo-sub">→ Choose Return to library in Switch settings</div>
   </div>
 </div>
 
@@ -248,18 +251,18 @@
 <div class="slide" id="slide2">
   <div class="icon">⌨️</div>
   <h2>On a Computer</h2>
-  <p>Press <strong>any key</strong> to make a choice.<br>Press <strong class="emph">Escape</strong> to go back.<br><br>That's it. Space, Enter, letters — they all work.</p>
+  <p>Press and release <strong>Space or Enter</strong> to make a choice.<br>Press <strong class="emph">Escape</strong> to open Switch settings.<br><br>Choose other switch keys in Switch settings. Tab pauses scanning for ordinary keyboard navigation.</p>
   <div class="demo-box" style="border-color:#C8934A">
     <div class="demo-icon">⌨️</div>
-    <div class="demo-label" style="color:#C8934A">Any key = Select</div>
-    <div class="demo-sub">Except Escape. Escape = Back.</div>
+    <div class="demo-label" style="color:#C8934A">Your switch = Select</div>
+    <div class="demo-sub">Escape opens Switch settings.</div>
   </div>
 </div>
 
 <!-- SLIDE 4: The Tools -->
 <div class="slide" id="slide3">
   <div class="icon">🧰</div>
-  <h2>The Tools</h2>
+  <h2>The Activities</h2>
   <p>Each tool is a big button on the main screen.</p>
   <div class="tool-grid">
     <div class="tool-item"><div class="t-icon">⌨️</div><div class="t-name">Type</div><div style="font-size:0.7rem;color:#999">AAC keyboard</div></div>
@@ -269,6 +272,9 @@
     <div class="tool-item"><div class="t-icon">🎯</div><div class="t-name">Tap</div><div style="font-size:0.7rem;color:#999">Reaction game</div></div>
     <div class="tool-item"><div class="t-icon">🎲</div><div class="t-name">Game Maker</div><div style="font-size:0.7rem;color:#999">Every game is new</div></div>
     <div class="tool-item"><div class="t-icon">🔥</div><div class="t-name">Hellgate</div><div style="font-size:0.7rem;color:#999">Corridor shooter</div></div>
+    <div class="tool-item"><div class="t-icon">🚀</div><div class="t-name">Rift-Signal</div></div>
+    <div class="tool-item"><div class="t-icon">🏎️</div><div class="t-name">Drift-Signal</div></div>
+    <div class="tool-item"><div class="t-icon">🚛</div><div class="t-name">American Big Rigs</div></div>
     <div class="tool-item"><div class="t-icon">🂡</div><div class="t-name">Solitaire</div><div style="font-size:0.7rem;color:#999">One-switch Klondike</div></div>
   </div>
 </div>
@@ -277,16 +283,16 @@
 <div class="slide" id="slide4">
   <div class="icon">🚀</div>
   <h2>Ready to try it?</h2>
-  <p>Tap below or press any key to open the main menu.<br><br>
-  Remember: <strong>tap or press any key</strong> to make a choice.<br>
-  <strong class="emph">Hold 2 seconds</strong> or press <strong class="emph">Escape</strong> to go back.</p>
+  <p>Tap below or press your switch to open the main menu.<br><br>
+  Remember: <strong>tap or press your switch</strong> to make a choice.<br>
+  <strong class="emph">Hold 2 seconds</strong> or press <strong class="emph">Escape</strong> to open Switch settings.</p>
   <div style="margin-top:20px">
     <a href="index.html" style="display:inline-block;padding:16px 48px;background:#4A7BC4;color:#fff;border-radius:60px;font-size:1.3rem;font-weight:700;text-decoration:none;touch-action:manipulation">Let's Go!</a>
   </div>
 </div>
 
 <!-- Pagination -->
-<div class="nav-hint" id="navHint">👆 Tap or press any key</div>
+<div class="nav-hint" id="navHint">👆 Tap or press your switch</div>
 <div class="nav-area">
   <div class="nav-dots" id="navDots">
     <span class="nav-dot active"></span>
@@ -309,7 +315,7 @@ let speaking = false;
 // TTS
 // ============================================================
 function speakSlide(idx) {
-  if (!('speechSynthesis' in window)) return;
+  if (!SwitchAccess.access.sound || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const text = getSlideText(idx);
   if (!text) return;
@@ -325,11 +331,11 @@ function speakSlide(idx) {
 
 function getSlideText(idx) {
   const texts = [
-    'Welcome to Switch Access. These tools let someone use a computer or iPad with just one switch. A switch can be a button, a tap, or any key on a keyboard. Tap or press any key to continue.',
-    'On iPad, the whole screen is your switch. Quick tap to pick something. Hold 2 seconds to cancel or go back. Hold 10 seconds to go to the main menu.',
-    'On a computer, press any key to make a choice. Space, Enter, letters — they all work. Press Escape to go back.',
-    'The main screen has eight tools. Type lets you write with an AAC keyboard. Calc is a calculator. Pop pops balloons. Pick lets you choose favorites. Tap is a reaction game. There is also Game Maker, Hellgate, and Solitaire.',
-    'Ready to try it? Tap the button or press any key to open the main menu. Remember: tap or press any key to make a choice. Hold 2 seconds or press Escape to go back.'
+    'Welcome to Switch Access. These tools let someone use a computer or iPad with just one switch. A switch can be a button, a tap, or Space or Enter on a keyboard. Tap or press your switch to continue.',
+    'On iPad, the whole screen is your switch. Quick tap to pick something. Hold your switch to open shared settings. The default hold is two seconds. Use Return to library to leave an activity.',
+    'On a computer, press your switch to make a choice. Space and Enter work by default. You can learn a different key in Switch settings. Press Escape to open Switch settings.',
+    'The main screen has eleven activities. Type lets you write with an AAC keyboard. Calc is a calculator. Pop pops balloons. Pick lets you choose favorites. Tap is a reaction game. There is also Game Maker, Hellgate, Solitaire, Rift-Signal, Drift-Signal, and American Big Rigs.',
+    'Ready to try it? Tap the button or press your switch to open the main menu. Remember: tap or press your switch to make a choice. Hold 2 seconds or press Escape to open Switch settings.'
   ];
   return texts[idx] || '';
 }
@@ -346,12 +352,12 @@ function goToSlide(idx) {
   // Update hint
   const hint = document.getElementById('navHint');
   if (idx === SLIDES - 1) {
-    hint.textContent = '👆 Tap the button or press any key';
+    hint.textContent = '👆 Tap the button or press your switch';
   } else {
-    hint.textContent = '👆 Tap or press any key to continue';
+    hint.textContent = '👆 Tap or press your switch to continue';
   }
   // Speak
-  setTimeout(() => speakSlide(idx), 300);
+  SwitchAccess.clock.setTimeout(() => speakSlide(idx), 300);
 }
 
 function nextSlide() {
@@ -371,26 +377,11 @@ function handleAction() {
 }
 
 // ============================================================
-// TOUCH / KEYBOARD
-// ============================================================
-// Any touch = next (except on links)
-document.documentElement.addEventListener('touchstart', function(e) {
-  if (e.target.closest('a')) return;
-  e.preventDefault();
-  handleAction();
-}, { passive: false });
-
-// Any key except Escape = next
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
-  handleAction();
-});
-
-// ============================================================
 // AUTO-START
 // ============================================================
 // Start TTS after short delay
-setTimeout(() => speakSlide(0), 500);
+SwitchAccess.clock.setTimeout(() => speakSlide(0), 500);
+SwitchAccess.register({id:'guide',home:'index.html',activate:handleAction});
 </script>
 <script src="firebase-init.js"></script>
 <script src="switchmate-tracker.js"></script>

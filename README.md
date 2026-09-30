@@ -1,5 +1,11 @@
 # SwitchMate / Switch Access — A Project of Best Polity LLC
 
+All 11 activities share one persistent switch-access profile on this browser/device.
+Open **Switch settings**, press Escape, or hold your switch to adjust it. Activity
+options and optional access overrides stay separate. See [Shared switch access](docs/switch-access.md)
+for the user guide, profile format, new-activity contract and test commands.
+
+
 Single-switch accessibility tools for people with developmental disabilities.
 Built with care, perpetually free.
 

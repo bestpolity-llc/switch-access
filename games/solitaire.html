@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="../shared/profile.js"></script>
+<script src="../shared/switch-access.js"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>SwitchMate — Switch Solitaire</title>
@@ -235,11 +238,12 @@ body:not(.solitaire-app) .app-only { display: none !important; }
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../shared/switch-access.css">
 </head>
 <body>
 <div class="app-toolbar app-only" id="appToolbar">
   <button class="app-mode-btn" id="switchModeBtn" type="button"><span class="bolt">⚡</span><span id="appModeLabel">Switch Mode</span></button>
-  <span class="app-toolbar-hint">tap 4 times to change switch mode</span>
+  <span class="app-toolbar-hint">Shared switch settings</span>
   <button class="app-round-btn" id="appSoundBtn" type="button" aria-label="Toggle sound">🔊</button>
   <button class="app-round-btn" id="appHelpBtn" type="button" aria-label="Open help and settings">?</button>
 </div>
@@ -283,56 +287,16 @@ body:not(.solitaire-app) .app-only { display: none !important; }
   </div>
 </div>
 
-<div class="overlay" id="settingsOverlay" hidden>
-  <div class="panel" id="settingsPanel">
-    <h2>Settings</h2>
-    <div class="setting">
-      <label>How to play</label>
-      <div class="btn-row">
-        <button class="opt" id="optEasy">Easy Play<small>One press makes a move happen. No wrong answers.</small></button>
-        <button class="opt" id="optScan">Choose Moves<small>Moves light up one at a time. Press to pick.</small></button>
-      </div>
-    </div>
-    <div class="setting" id="speedSetting">
-      <label>Scanning speed</label>
-      <div class="btn-row">
-        <button class="opt" id="optSlow">Slow</button>
-        <button class="opt" id="optMedium">Medium</button>
-        <button class="opt" id="optFast">Fast</button>
-      </div>
-    </div>
-    <div class="setting">
-      <label>Sound &amp; voice</label>
-      <div class="btn-row">
-        <button class="opt" id="optSound">Sounds</button>
-        <button class="opt" id="optVoice">Voice</button>
-      </div>
-    </div>
-    <div class="btn-row footer-row">
-      <button class="opt danger" id="optNewGame">New game</button>
-      <button class="opt primary" id="optBack">Back to the game</button>
-    </div>
-    <div class="btn-row footer-row">
-      <button class="opt primary" id="optHome">🏠 SwitchMate Home</button>
-    </div>
-    <p class="hint">Switch input: <b>Space</b>, <b>Enter</b>, or any click / tap on the table.
-      Quick tap = play · hold 2s = settings · hold 10s = home.</p>
-  </div>
-</div>
-
-<div class="hold-bar"><div class="hold-fill" id="holdFill"></div></div>
-<div class="hold-status" id="holdStatus"></div>
-
 <script>
 "use strict";
 const IS_SOLITAIRE_APP = new URLSearchParams(location.search).get("app") === "1";
-let switchZone = localStorage.getItem("switchaac_sol_zone") === "bottom" ? "bottom" : "fullscreen";
+let switchZone = SwitchAccess.storage.getItem("switchaac_sol_zone") === "bottom" ? "bottom" : "fullscreen";
 document.body.classList.toggle("solitaire-app", IS_SOLITAIRE_APP);
 document.body.classList.toggle("bottom-switch", switchZone === "bottom");
 /* ============================================================
    SWITCH SOLITAIRE — real Klondike, one switch, zero errors
    Vanilla port of the React original. SwitchMate conventions:
-   quick tap = play/select, hold 2s = settings, hold 10s = hub.
+   quick tap = play/select, hold 2s = settings, hold = shared access menu.
    ============================================================ */
 
 const SUITS = [
@@ -568,18 +532,13 @@ function speak(text) {
 }
 
 /* ---------- settings (persisted) ---------- */
-const SCAN_SPEEDS = { slow: 4000, medium: 2500, fast: 1500 };
 const settings = {
-  mode:  localStorage.getItem("switchaac_sol_mode") === "scan" ? "scan" : "easy",
-  speed: ["slow","medium","fast"].includes(localStorage.getItem("switchaac_sol_speed")) ? localStorage.getItem("switchaac_sol_speed") : "medium",
-  sound: localStorage.getItem("switchaac_sol_sound") !== "0",
-  voice: localStorage.getItem("switchaac_sol_voice") !== "0",
+  mode:  SwitchAccess.storage.getItem("switchaac_sol_mode") === "scan" ? "scan" : "easy",
+  sound: SwitchAccess.storage.getItem("switchaac_sol_sound") !== "0",
+  voice: SwitchAccess.storage.getItem("switchaac_sol_voice") !== "0",
 };
 function saveSettings() {
-  localStorage.setItem("switchaac_sol_mode", settings.mode);
-  localStorage.setItem("switchaac_sol_speed", settings.speed);
-  localStorage.setItem("switchaac_sol_sound", settings.sound ? "1" : "0");
-  localStorage.setItem("switchaac_sol_voice", settings.voice ? "1" : "0");
+  SwitchAccess.setApp({mode:settings.mode});
 }
 
 /* ---------- UI state ---------- */
@@ -739,25 +698,25 @@ function burstConfetti(big) {
   }));
   confettiItems = confettiItems.concat(items);
   renderConfetti();
-  setTimeout(() => {
+  SwitchAccess.clock.setTimeout(() => {
     confettiItems = confettiItems.filter(it => !items.includes(it));
     renderConfetti();
   }, big ? 5000 : 2600);
 }
 
 /* ---------- scanning timer ---------- */
-function stopScan() { if (scanTimer) { clearInterval(scanTimer); scanTimer = null; } }
+function stopScan() { if (scanTimer) { SwitchAccess.scanClock.clearInterval(scanTimer); scanTimer = null; } }
 function startScan() {
   stopScan();
   if (settings.mode !== "scan" || won || settingsOpen || pending) return;
-  scanTimer = setInterval(() => {
+  scanTimer = SwitchAccess.scanClock.setInterval(() => {
     const mv = moves();
     scanIdx = (scanIdx + 1) % mv.length;
     sndScan();
     const m = mv[scanIdx];
     if (m) speak(moveWords(m).say);
     render();
-  }, SCAN_SPEEDS[settings.speed]);
+  }, SwitchAccess.access.scanMs);
 }
 
 /* ---------- run a move ---------- */
@@ -799,11 +758,7 @@ function runMove(m) {
 }
 
 /* ---------- THE switch (quick tap) ---------- */
-let lastPress = 0;
 function onSwitch() {
-  const now = Date.now();
-  if (now - lastPress < 300) return;  // debounce
-  lastPress = now;
   ensureAudio();
   if (settingsOpen) return;
   if (won) { runMove({ type: "newgame" }); return; }
@@ -813,7 +768,7 @@ function onSwitch() {
     if (!m) return;
     pending = m;
     render();                        // flash what's about to happen
-    setTimeout(() => { pending = null; runMove(m); }, 400);
+    SwitchAccess.clock.setTimeout(() => { pending = null; runMove(m); }, 400);
   } else {
     const mv = moves();
     const m = mv[scanIdx];
@@ -823,139 +778,31 @@ function onSwitch() {
 
 /* ---------- settings panel ---------- */
 function openSettings() {
-  settingsOpen = true;
-  stopScan();
-  syncSettingsUI();
-  $("settingsOverlay").hidden = false;
-}
-function closeSettings() {
-  settingsOpen = false;
-  $("settingsOverlay").hidden = true;
-  scanIdx = 0;
-  render(); startScan();
+  SwitchAccess.open('activity');
 }
 function syncSettingsUI() {
-  if (IS_SOLITAIRE_APP) {
-    $("optHome").hidden = true;
-  }
-  $("optEasy").className = "opt" + (settings.mode === "easy" ? " on" : "");
-  $("optScan").className = "opt" + (settings.mode === "scan" ? " on" : "");
-  $("speedSetting").style.display = settings.mode === "scan" ? "" : "none";
-  ["slow","medium","fast"].forEach(s => {
-    $("opt" + s[0].toUpperCase() + s.slice(1)).className = "opt" + (settings.speed === s ? " on" : "");
-  });
-  $("optSound").className = "opt" + (settings.sound ? " on" : "");
-  $("optSound").textContent = "Sounds " + (settings.sound ? "On" : "Off");
-  $("optVoice").className = "opt" + (settings.voice ? " on" : "");
-  $("optVoice").textContent = "Voice " + (settings.voice ? "On" : "Off");
-  if (IS_SOLITAIRE_APP) {
-    $("appModeLabel").textContent = switchZone === "fullscreen" ? "Full Screen" : "Bottom 25%";
-    $("appSoundBtn").textContent = settings.sound ? "🔊" : "🔇";
-    $("appSoundBtn").setAttribute("aria-label", settings.sound ? "Turn sound off" : "Turn sound on");
+  if(IS_SOLITAIRE_APP){
+    $("appModeLabel").textContent=SwitchAccess.access.pointerMode==='external'?'Keyboard switch':switchZone==='bottom'?'Bottom 25%':'Full Screen';
+    $("appSoundBtn").textContent=settings.sound?'🔊':'🔇';
+    $("appSoundBtn").setAttribute('aria-label',settings.sound?'Turn sound off':'Turn sound on');
   }
 }
-$("gearBtn").addEventListener("click", e => { e.stopPropagation(); openSettings(); });
-$("optEasy").addEventListener("click", () => { settings.mode = "easy"; saveSettings(); syncSettingsUI(); });
-$("optScan").addEventListener("click", () => { settings.mode = "scan"; saveSettings(); syncSettingsUI(); });
-$("optSlow").addEventListener("click", () => { settings.speed = "slow"; saveSettings(); syncSettingsUI(); });
-$("optMedium").addEventListener("click", () => { settings.speed = "medium"; saveSettings(); syncSettingsUI(); });
-$("optFast").addEventListener("click", () => { settings.speed = "fast"; saveSettings(); syncSettingsUI(); });
-$("optSound").addEventListener("click", () => { settings.sound = !settings.sound; saveSettings(); syncSettingsUI(); });
-$("optVoice").addEventListener("click", () => { settings.voice = !settings.voice; saveSettings(); syncSettingsUI(); });
-$("optNewGame").addEventListener("click", () => {
-  game = newGameState(); won = false; scanIdx = 0;
-  message = { parts: ["Here's a fresh game! 🃏"], tone: "idle" };
-  closeSettings();
-});
-$("optBack").addEventListener("click", closeSettings);
-$("optHome").addEventListener("click", () => {
-  if (!IS_SOLITAIRE_APP) window.location.href = "../index.html";
-});
-if (IS_SOLITAIRE_APP) {
-  let modeTapCount = 0, modeTapTimer = null;
-  $("switchModeBtn").addEventListener("click", e => {
-    e.stopPropagation();
-    modeTapCount += 1;
-    clearTimeout(modeTapTimer);
-    modeTapTimer = setTimeout(() => { modeTapCount = 0; }, 1500);
-    if (modeTapCount === 4) {
-      modeTapCount = 0;
-      switchZone = switchZone === "fullscreen" ? "bottom" : "fullscreen";
-      localStorage.setItem("switchaac_sol_zone", switchZone);
-      document.body.classList.toggle("bottom-switch", switchZone === "bottom");
-      syncSettingsUI();
-    }
-  });
-  $("appSoundBtn").addEventListener("click", e => {
-    e.stopPropagation();
-    settings.sound = !settings.sound;
-    saveSettings(); syncSettingsUI();
-  });
-  $("appHelpBtn").addEventListener("click", openSettings);
-  $("appSwitchBtn").addEventListener("click", onSwitch);
+$("gearBtn").addEventListener('click',openSettings);
+if(IS_SOLITAIRE_APP){
+  $("switchModeBtn").addEventListener('click',()=>SwitchAccess.open('access'));
+  $("appSoundBtn").addEventListener('click',()=>SwitchAccess.update({sound:!settings.sound}));
+  $("appHelpBtn").addEventListener('click',()=>SwitchAccess.open());
 }
-
-/* ---------- SwitchMate hold semantics: tap=play, 2s=settings, 10s=hub ---------- */
-let touchStart = 0, holdInt = null, holdFired10 = false, holdFired2 = false;
-document.documentElement.addEventListener("touchstart", function(e) {
-  if (touchStart) return;
-  if (e.target.closest && e.target.closest(".app-toolbar, .panel, .gear")) return;  // real controls stay tappable
-  e.preventDefault();
-  touchStart = Date.now(); holdFired10 = holdFired2 = false;
-  $("holdFill").style.width = "0%";
-  holdInt = setInterval(() => {
-    const elapsed = (Date.now() - touchStart) / 1000;
-    $("holdFill").style.width = Math.min(100, (elapsed / 10) * 100) + "%";
-    if (!IS_SOLITAIRE_APP && elapsed >= 10 && !holdFired10) {
-      holdFired10 = true; clearInterval(holdInt); holdInt = null;
-      $("holdFill").style.width = "100%";
-      setTimeout(() => { window.location.href = "../index.html"; }, 300);
-    } else if (elapsed >= 2 && !holdFired2) {
-      holdFired2 = true;
-      $("holdStatus").textContent = "Settings… (10s = home)";
-      $("holdStatus").classList.add("show");
-    }
-  }, 50);
-}, { passive: false });
-document.documentElement.addEventListener("touchend", function(e) {
-  if (!touchStart) return;
-  const elapsed = (Date.now() - touchStart) / 1000;
-  touchStart = 0;
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  $("holdFill").style.width = "0%";
-  $("holdStatus").classList.remove("show");
-  if (holdFired10) { holdFired10 = false; return; }
-  if (elapsed >= 2) { settingsOpen ? closeSettings() : openSettings(); }
-  else onSwitch();
-}, { passive: true });
-document.documentElement.addEventListener("touchcancel", function() {
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  touchStart = 0; holdFired10 = holdFired2 = false;
-  $("holdFill").style.width = "0%";
-  $("holdStatus").classList.remove("show");
-}, { passive: true });
-
-/* ---------- keyboard / pointer ---------- */
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { settingsOpen ? closeSettings() : openSettings(); return; }
-  if (e.repeat) return;
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if (["Tab","F5","F11","F12"].includes(e.key)) return;
-  if (settingsOpen) return;   // let helper use the panel with keyboard/mouse
-  if (e.code === "Space" || e.code === "Enter" || e.code === "NumpadEnter" || true) {
-    e.preventDefault();
-    onSwitch();
-  }
-});
-document.addEventListener("pointerdown", e => {
-  if (e.pointerType === "touch") return;  // handled by touch handlers
-  if (e.target.closest && e.target.closest(".app-toolbar, .panel, .gear")) return;
-  onSwitch();
-});
 
 /* ---------- go ---------- */
 render();
 startScan();
+
+SwitchAccess.register({id:'solitaire',isolated:IS_SOLITAIRE_APP,home:'../index.html',activate:onSwitch,
+ settings:{mode:{label:'Play style',values:['easy','scan'],default:'easy',format:v=>v==='easy'?'Easy play':'Choose moves'}},legacy:settings,
+ apply(a,p){Object.assign(settings,p,{sound:a.sound,voice:a.sound&&a.spokenLabels});switchZone=a.pointerMode==='bottom'?'bottom':'fullscreen';document.body.classList.toggle('bottom-switch',switchZone==='bottom');syncSettingsUI();render();startScan();},
+ actions:[{label:'Deal a new game',run:()=>runMove({type:'newgame'})}]
+});
 </script>
 <script src="../firebase-init.js"></script>
 <script src="../switchmate-tracker.js"></script>

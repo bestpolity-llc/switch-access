@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="../shared/profile.js"></script>
+<script src="../shared/switch-access.js"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SwitchMate — Game Maker</title>
@@ -126,6 +129,7 @@
     * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   }
 </style>
+<link rel="stylesheet" href="../shared/switch-access.css">
 </head>
 <body>
 <div id="stage"></div>
@@ -234,6 +238,7 @@ function makeGenome(seed) {
 // ============================================================
 let AC = null;
 function beep(freq, dur = 0.12, type = 'sine', vol = 0.25) {
+  if(!SwitchAccess.access.sound)return;
   try {
     if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
     const o = AC.createOscillator(), gn = AC.createGain();
@@ -244,8 +249,8 @@ function beep(freq, dur = 0.12, type = 'sine', vol = 0.25) {
     o.start(); o.stop(AC.currentTime + dur);
   } catch (e) {}
 }
-function sfxGood(g) { beep(g.pitch, 0.1); setTimeout(() => beep(g.pitch * 1.5, 0.15), 90); }
-function sfxWin(g) { [1, 1.25, 1.5, 2].forEach((m, i) => setTimeout(() => beep(g.pitch * m, 0.2), i * 130)); }
+function sfxGood(g) { beep(g.pitch, 0.1); SwitchAccess.clock.setTimeout(() => beep(g.pitch * 1.5, 0.15), 90); }
+function sfxWin(g) { [1, 1.25, 1.5, 2].forEach((m, i) => SwitchAccess.clock.setTimeout(() => beep(g.pitch * m, 0.2), i * 130)); }
 function sfxMiss(g) { beep(g.pitch * 0.5, 0.2, 'square', 0.12); }
 
 // ============================================================
@@ -253,10 +258,10 @@ function sfxMiss(g) { beep(g.pitch * 0.5, 0.2, 'square', 0.12); }
 // ============================================================
 const HIST_KEY = 'sm_maker_history_v1';
 function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch (e) { return []; }
+  try { return JSON.parse(SwitchAccess.storage.getItem(HIST_KEY)) || []; } catch (e) { return []; }
 }
 function saveHistory(h) {
-  try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 100))); } catch (e) {}
+  try { SwitchAccess.storage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 100))); } catch (e) {}
 }
 function recordPlay(g) {
   const h = loadHistory();
@@ -278,7 +283,7 @@ function recordLove(g) {
 // Global event feed → Firestore (same pipeline as switchmate-tracker)
 function logEvent(type, g) {
   try {
-    if (localStorage.getItem('switchaac_analytics') === '0') return;
+    if (SwitchAccess.storage.getItem('switchaac_analytics') === '0') return;
     if (typeof DB === 'undefined') return;
     DB.collection('game_maker_events').add({
       type, seed: g.seed, name: g.name, mechanic: g.mechanic, theme: g.theme.name,
@@ -315,7 +320,7 @@ function hud() {
 }
 function clearStage() {
   cancelAnimationFrame(raf); raf = null;
-  clearTimeout(spawnTimer); spawnTimer = null;
+  SwitchAccess.clock.clearTimeout(spawnTimer); spawnTimer = null;
   stage.innerHTML = ''; sprites = [];
 }
 function burst(x, y, emoji) {
@@ -326,12 +331,12 @@ function burst(x, y, emoji) {
     p.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px');
     p.style.setProperty('--dy', (Math.random() * 160 - 80) + 'px');
     stage.appendChild(p);
-    setTimeout(() => p.remove(), 700);
+    SwitchAccess.clock.setTimeout(() => p.remove(), 700);
   }
 }
 function flash() {
   const f = document.getElementById('flash');
-  f.style.opacity = 0.35; setTimeout(() => f.style.opacity = 0, 120);
+  f.style.opacity = 0.35; SwitchAccess.clock.setTimeout(() => f.style.opacity = 0, 120);
 }
 
 function startGame(genome) {
@@ -373,10 +378,11 @@ const ENGINES = {
           el.style.left = s.x + 'px';
           stage.appendChild(el); sprites.push(s);
         }
-        spawnTimer = setTimeout(spawn, 400);
+        spawnTimer = SwitchAccess.clock.setTimeout(spawn, 400);
       };
       spawn();
       const tick = () => {
+        if(SwitchAccess.paused){raf=requestAnimationFrame(tick);return;}
         if (mode !== 'playing') return;
         for (const s of sprites) {
           s.y -= s.vy * 2;
@@ -417,6 +423,7 @@ const ENGINES = {
       this.mover = { el, x: 0 }; this.dir = 1;
       const speed = 3.2 * G.speed;
       const tick = () => {
+        if(SwitchAccess.paused){raf=requestAnimationFrame(tick);return;}
         if (mode !== 'playing') return;
         const m = this.mover;
         m.x += speed * this.dir;
@@ -445,6 +452,7 @@ const ENGINES = {
       this.stackTop = innerHeight - 20;
       this.newMover();
       const tick = () => {
+        if(SwitchAccess.paused){raf=requestAnimationFrame(tick);return;}
         if (mode !== 'playing') return;
         const m = this.mover;
         if (m) {
@@ -474,7 +482,7 @@ const ENGINES = {
       m.el.style.top = this.stackTop + 'px';
       addScore(m.x + G.size / 2, this.stackTop);
       this.mover = null;
-      if (mode === 'playing') setTimeout(() => { if (mode === 'playing') this.newMover(); }, 420);
+      if (mode === 'playing') SwitchAccess.clock.setTimeout(() => { if (mode === 'playing') this.newMover(); }, 420);
     }
   },
 
@@ -499,10 +507,11 @@ const ENGINES = {
         o.style.top = (ground + G.size * 0.2) + 'px';
         stage.appendChild(o);
         this.obstacles.push({ el: o, x: innerWidth + 40, scored: false });
-        spawnTimer = setTimeout(spawnObs, (1600 + Math.random() * 900) / G.speed);
+        spawnTimer = SwitchAccess.clock.setTimeout(spawnObs, (1600 + Math.random() * 900) / G.speed);
       };
       spawnObs();
       const tick = () => {
+        if(SwitchAccess.paused){raf=requestAnimationFrame(tick);return;}
         if (mode !== 'playing') return;
         // hero physics
         if (this.jumping) {
@@ -558,11 +567,12 @@ function scanStep() {
   if (!btns.length) return;
   scanIdx = (scanIdx + 1) % btns.length;
   btns.forEach((b, i) => b.classList.toggle('scan', i === scanIdx));
+  SwitchAccess.announce(btns[scanIdx].textContent);
   beep(500, 0.04, 'sine', 0.06);
-  scanTimer = setTimeout(scanStep, 1300);
+  scanTimer = SwitchAccess.scanClock.setTimeout(scanStep, SwitchAccess.access.scanMs);
 }
 function stopMenuScan() {
-  clearTimeout(scanTimer); scanTimer = null;
+  SwitchAccess.scanClock.clearTimeout(scanTimer); scanTimer = null;
   document.querySelectorAll('.scan').forEach(b => b.classList.remove('scan'));
   scanIdx = -1; scanContainer = null;
 }
@@ -616,7 +626,7 @@ document.getElementById('endOpts').addEventListener('click', e => {
     recordLove(G); sfxWin(G);
     const btn = e.target.closest('.menu-btn');
     btn.textContent = '❤️ Loved!'; btn.style.borderColor = '#f5576c';
-    setTimeout(newRandomGame, 900);
+    SwitchAccess.clock.setTimeout(newRandomGame, 900);
   }
   else if (act === 'again') playSeed(G.seed);
   else if (act === 'new') newRandomGame();
@@ -629,63 +639,17 @@ document.getElementById('historyOverlay').addEventListener('click', e => {
 });
 
 // ============================================================
-// SWITCH INPUT — tap = action/select, hold 2s = menu, hold 10s = hub
+// SWITCH INPUT — tap = action/select, hold 2s = menu, hold = shared access menu
 // ============================================================
 function primaryAction() {
   if (mode === 'playing') { ENGINES[G.mechanic].action(); return; }
   if (mode === 'menu' || mode === 'end' || mode === 'history') { selectScanned(); return; }
 }
 
-let touchStart = 0, holdInt = null, holdFired = false;
-document.documentElement.addEventListener('touchstart', function (e) {
-  if (touchStart) return;
-  if (e.target.closest('.menu-btn') || e.target.closest('.hist-item')) return; // direct taps work
-  e.preventDefault();
-  touchStart = Date.now(); holdFired = false;
-  document.getElementById('holdFill').style.width = '0%';
-  holdInt = setInterval(() => {
-    const elapsed = (Date.now() - touchStart) / 1000;
-    document.getElementById('holdFill').style.width = Math.min(100, (elapsed / 10) * 100) + '%';
-    if (elapsed >= 10 && !holdFired) {
-      holdFired = true; clearInterval(holdInt); holdInt = null;
-      document.getElementById('holdStatus').textContent = '×';
-      document.getElementById('holdStatus').classList.add('show');
-      setTimeout(() => { window.location.href = '../index.html'; }, 300);
-    } else if (elapsed >= 2 && !holdFired) {
-      document.getElementById('holdStatus').textContent = 'Hold...';
-      document.getElementById('holdStatus').classList.add('show');
-    }
-  }, 50);
-}, { passive: false });
-
-document.documentElement.addEventListener('touchend', function (e) {
-  if (!touchStart) return;
-  const elapsed = (Date.now() - touchStart) / 1000;
-  touchStart = 0;
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  document.getElementById('holdFill').style.width = '0%';
-  document.getElementById('holdStatus').classList.remove('show');
-  if (holdFired) { holdFired = false; return; }
-  if (elapsed >= 2) { showMenu(); }
-  else { primaryAction(); }
-}, { passive: true });
-
-document.documentElement.addEventListener('touchcancel', function () {
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  touchStart = 0;
-  document.getElementById('holdFill').style.width = '0%';
-  document.getElementById('holdStatus').classList.remove('show');
-}, { passive: true });
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { window.location.href = '../index.html'; return; }
-  if (e.repeat) { e.preventDefault(); return; }  // held switch must not machine-gun
-  e.preventDefault();
-  primaryAction();
-});
-
 // boot
 showMenu();
+
+SwitchAccess.register({id:'maker',home:'../index.html',activate:primaryAction,actions:[{label:'Choose another game',run:showMenu}]});
 </script>
 <script src="../firebase-init.js"></script>
 <script src="../switchmate-tracker.js"></script>

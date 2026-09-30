@@ -14,9 +14,9 @@ class SolitaireAndroidIsolationTests(unittest.TestCase):
     def test_isolated_mode_cannot_navigate_to_switchmate_home(self):
         source = (ROOT / "games/solitaire.html").read_text()
         self.assertIn('const IS_SOLITAIRE_APP = new URLSearchParams(location.search).get("app") === "1";', source)
-        self.assertIn('if (IS_SOLITAIRE_APP) {', source)
-        self.assertIn('$("optHome").hidden = true;', source)
-        self.assertIn('if (!IS_SOLITAIRE_APP) window.location.href = "../index.html";', source)
+        self.assertIn('isolated:IS_SOLITAIRE_APP', source)
+        controller=(ROOT / 'shared/switch-access.js').read_text()
+        self.assertIn("!adapter.isolated&&adapter.id!=='library'", controller)
 
 
 if __name__ == "__main__":

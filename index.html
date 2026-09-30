@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="shared/profile.js"></script>
+<script src="shared/switch-access.js"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SwitchMate — Switch Access</title>
@@ -32,7 +35,7 @@
 
 <!-- Google tag (gtag.js) — skipped when usage stats are turned off -->
 <script>
-  if (localStorage.getItem('switchaac_analytics') !== '0') {
+  if (SwitchAccess.storage.getItem('switchaac_analytics') !== '0') {
     const s = document.createElement('script');
     s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=G-K6HGF1692H';
     document.head.appendChild(s);
@@ -399,6 +402,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="switchmate-tracker.js"></script>
+<link rel="stylesheet" href="shared/switch-access.css">
 </head>
 <body>
 
@@ -406,7 +410,7 @@
   <div class="brand-lockup"><img src="switchmate-mark.svg" width="60" height="32" alt=""><span>SwitchMate</span></div>
   <div class="auth-bar">
     <button class="auth-btn" id="authBtn" onclick="handleAuth()"><span id="authLabel">Sign in</span></button>
-    <div class="auth-note" id="authNote">Sign in to save settings and send feedback.</div>
+    <div class="auth-note" id="authNote">Switch settings save on this device. Sign in to send feedback.</div>
   </div>
 </header>
 
@@ -521,26 +525,7 @@
 
 <button class="help-btn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
 
-<div class="help-overlay" id="helpOverlay">
-  <div class="help-box">
-    <h2>How To Use</h2>
-    <div class="help-section">
-      <div class="title">👆 Touch (iPad)</div>
-      <div class="help-row"><span class="gesture">👆</span><span class="arrow">→</span><span class="desc">Tap <span class="desc-sub">quick</span></span></div>
-      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">2s</span></span></div>
-      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">10s</span></span></div>
-    </div>
-    <div class="help-section">
-      <div class="title">⌨️ Keyboard</div>
-      <div class="help-row"><span class="gesture">⌨️</span><span class="arrow">→</span><span class="desc">Any key <span class="desc-sub">to select</span></span></div>
-      <div class="help-row"><span class="gesture">Esc</span><span class="arrow">→</span><span class="desc">Back</span></div>
-    </div>
-    <div style="text-align:center;margin-top:12px">
-      <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem">▶️ Start Guided Tour</a>
-    </div>
-    <button class="help-close" onclick="hideHelp()" aria-label="Close help">Got it</button>
-  </div>
-</div>
+
 
 <div class="welcome-banner" id="welcomeBanner">
   <div class="wb-icon">👋</div>
@@ -564,7 +549,7 @@
 // Number of hub tiles — derived from the DOM so scanning can never drift
 // from the actual grid.
 const BTN_COUNT = document.querySelectorAll('.grid .btn').length;
-const SCAN_SPEED = 1200;
+let SCAN_SPEED = 2000;
 
 let switchModeOn = false;
 let scanTimer = null;
@@ -572,12 +557,12 @@ let scanIndex = 0;
 let scanning = false;
 
 function loadSwitchMode() {
-  const val = localStorage.getItem('switchmate_switchmode');
-  return val === '1';
+  const val = SwitchAccess.storage.getItem('switchmate_switchmode');
+  return val !== '0';
 }
 
 function saveSwitchMode(val) {
-  localStorage.setItem('switchmate_switchmode', val ? '1' : '0');
+  SwitchAccess.storage.setItem('switchmate_switchmode', val ? '1' : '0');
 }
 
 function updateModeUI() {
@@ -591,7 +576,7 @@ function clearScanHighlights() {
 function highlightBtn(idx) {
   clearScanHighlights();
   const btns = document.querySelectorAll('.grid .btn');
-  if (btns[idx]) btns[idx].classList.add('scan-highlight');
+  if (btns[idx]) {btns[idx].classList.add('scan-highlight');SwitchAccess.announce(btns[idx].textContent);}
 }
 
 function startScanning() {
@@ -599,7 +584,7 @@ function startScanning() {
   scanning = true;
   scanIndex = 0;
   highlightBtn(0);
-  scanTimer = setInterval(() => {
+  scanTimer = SwitchAccess.scanClock.setInterval(() => {
     scanIndex = (scanIndex + 1) % BTN_COUNT;
     highlightBtn(scanIndex);
   }, SCAN_SPEED);
@@ -607,7 +592,7 @@ function startScanning() {
 
 function stopScanning() {
   scanning = false;
-  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (scanTimer) { SwitchAccess.scanClock.clearInterval(scanTimer); scanTimer = null; }
   clearScanHighlights();
 }
 
@@ -637,101 +622,14 @@ function toggleSwitchMode() {
 switchModeOn = loadSwitchMode();
 updateModeUI();
 if (switchModeOn) {
-  setTimeout(startScanning, 300);
+  SwitchAccess.clock.setTimeout(startScanning, 300);
 }
-
-// ============================================================
-// TOUCH / KEYBOARD
-// ============================================================
-let touchStart = 0, holdInt = null, holdFired = false;
-const holdExit = 10, holdCancel = 2;
-
-document.addEventListener('touchstart', function(e) {
-  if (touchStart) return;
-  if (e.target.closest('a')) return;
-  if (e.target.closest('button')) return;
-  if (e.target.closest('.support-section')) return;
-  e.preventDefault();
-  touchStart = Date.now();
-  holdFired = false;
-  const fill = document.getElementById('holdFill');
-  fill.style.width = '0%';
-  holdInt = setInterval(() => {
-    const elapsed = (Date.now() - touchStart) / 1000;
-    fill.style.width = Math.min(100, (elapsed / holdExit) * 100) + '%';
-    const status = document.getElementById('holdStatus');
-    if (elapsed >= holdExit && !holdFired) {
-      holdFired = true;
-      clearInterval(holdInt);
-      holdInt = null;
-      fill.style.width = '100%';
-      status.textContent = switchModeOn ? '⚡ Mode OFF' : '⚡ Mode ON';
-      status.classList.add('show');
-      setTimeout(() => {
-        status.classList.remove('show');
-        toggleSwitchMode();
-      }, 400);
-    } else if (elapsed >= holdCancel && !holdFired) {
-      status.textContent = 'Hold for switch mode';
-      status.classList.add('show');
-    }
-  }, 50);
-}, { passive: false });
-
-document.addEventListener('touchend', function(e) {
-  if (!touchStart) return;
-  const elapsed = (Date.now() - touchStart) / 1000;
-  touchStart = 0;
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  const fill = document.getElementById('holdFill');
-  const status = document.getElementById('holdStatus');
-  fill.style.width = '0%';
-  status.classList.remove('show');
-  if (holdFired) { holdFired = false; return; }
-  if (elapsed >= holdCancel) {
-    // Cancel = just clear
-  } else {
-    // Quick tap = select on switch mode
-    if (switchModeOn) {
-      if (!scanning) { startScanning(); return; }
-      selectCurrent();
-    }
-  }
-}, { passive: true });
-
-document.addEventListener('touchcancel', function(e) {
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  touchStart = 0;
-  const fill = document.getElementById('holdFill');
-  if (fill) fill.style.width = '0%';
-  const status = document.getElementById('holdStatus');
-  if (status) status.classList.remove('show');
-}, { passive: true });
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') return;
-  if (e.repeat) return;
-  // Space (or any key) turns switch mode ON if it isn't already, then the
-  // next press selects. This lets a switch user boot straight into scanning
-  // without needing the 10-second hold gesture.
-  if (!switchModeOn) {
-    e.preventDefault();
-    switchModeOn = true;
-    saveSwitchMode(switchModeOn);
-    updateModeUI();
-    startScanning();
-    return;
-  }
-  e.preventDefault();
-  if (!scanning) { startScanning(); return; }
-  selectCurrent();
-});
 
 // ============================================================
 // HELP
 // ============================================================
-function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
-function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+function showHelp() { SwitchAccess.open(); }
+function hideHelp() { SwitchAccess.close(); }
 
 // ============================================================
 // AUTH
@@ -782,7 +680,7 @@ async function submitFeedback() {
   if (ok) {
     document.getElementById('feedbackStatus').textContent = '✅ Sent! Thank you.';
     document.getElementById('feedbackStatus').style.color = '#43a047';
-    setTimeout(closeFeedback, 1500);
+    SwitchAccess.clock.setTimeout(closeFeedback, 1500);
   } else {
     document.getElementById('feedbackStatus').textContent = 'Something went wrong.';
     document.getElementById('feedbackStatus').style.color = '#d44';
@@ -793,17 +691,18 @@ async function submitFeedback() {
 function showWelcomeBanner() {
   const b = document.getElementById('welcomeBanner');
   b.classList.add('show');
-  setTimeout(() => b.classList.remove('show'), 8000);
+  SwitchAccess.clock.setTimeout(() => b.classList.remove('show'), 8000);
 }
 function dismissBanner() {
   document.getElementById('welcomeBanner').classList.remove('show');
-  localStorage.setItem('switchmate_visits', '2');
+  SwitchAccess.storage.setItem('switchmate_visits', '2');
 }
 (function() {
-  let v = parseInt(localStorage.getItem('switchmate_visits') || '0');
+  let v = parseInt(SwitchAccess.storage.getItem('switchmate_visits') || '0');
   v++;
-  localStorage.setItem('switchmate_visits', String(v));
-  if (v === 1 || v % 5 === 0) setTimeout(showWelcomeBanner, 500);
+  SwitchAccess.storage.setItem('switchmate_visits', String(v));
+  if (v === 1 || v % 5 === 0) SwitchAccess.clock.setTimeout(showWelcomeBanner, 500);
+SwitchAccess.register({id:'library',activate(){if(!switchModeOn){switchModeOn=true;updateModeUI();startScanning();}else selectCurrent();},apply(a){SCAN_SPEED=a.scanMs;if(switchModeOn)startScanning();}});
 })();
 </script>
 </body>
