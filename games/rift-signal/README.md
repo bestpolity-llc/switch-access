@@ -12,11 +12,22 @@ The shell uses the SwitchMate blue, navy and gold palette and local toggle mark 
 
 ## Input and accessibility
 
-Scanning starts automatically. All mission actions, Help, Settings, Replay, Restart, Exit, setting changes, and confirmations participate. The gold outline identifies the selected command. Picture scenes use their own adjustable dwell (5/8/12/20 seconds); other controls use 2/3/5/8 seconds. Choices repeat indefinitely.
+Scanning starts automatically. Mission actions, Help, Settings, Replay, Restart,
+Exit and confirmations participate. Picture choices repeat indefinitely and keep
+an activity-specific dwell (2/3/5/8/12/20 seconds). Ordinary controls use the
+shared site's scan time.
 
-Full-screen input accepts a stationary tap anywhere; bottom-quarter input provides a fixed pad occupying 25dvh; external mode accepts Space/Enter. Labeled buttons always support direct activation. Selection happens on release; held/repeating keys, compatibility clicks, double activation within 650ms, canceled pointers and scrolling gestures cannot advance multiple scenes. Tab pauses scanning for normal keyboard use. Escape returns from panels or opens Help. Panels and hidden tabs pause mission progression. Restart and Exit have scannable cancel/confirm choices.
+The profile controls switch keys, touch area, minimum press, repeat filtering,
+menu hold, sounds and spoken choices. Space/Enter select on release by default.
+A hold or Escape opens shared settings; Tab pauses scanning for native controls.
+Settings and hidden pages pause the shared clock without changing the current
+picture. Restart and Exit retain their scanned cancel/confirm choices.
 
-Settings use the isolated localStorage key switchmate.rift-signal.settings.v1, validate stored values, and tolerate unavailable/corrupt storage. No SwitchMate account or existing tools' settings are changed. Text scales to 140%, layouts reflow, zoom is allowed, and there is no animated countdown. Browser speech queries available English voices on each invocation; missing/failed/delayed speech reports a visible fallback without blocking play.
+Picture dwell and text scale (up to 140%) are activity options imported once from
+legacy preferences. Access settings now follow the same profile as all other
+activities. Serve the repository over HTTP(S), including `shared/`. See
+[Shared switch access](../../docs/switch-access.md) for the schema and migration.
+Browser speech still has visible missing/failed/delayed-voice fallback text.
 
 ## Verification
 
@@ -28,13 +39,11 @@ work/rift-tests/node_modules/.bin/playwright install --with-deps chromium
 node tests/rift-signal.mjs
 ```
 
-GitHub Actions runs the same checks and retains desktop/mobile screenshots. Tests cover the mission graph and both paths at 1440×900 and 390×844, all input modes, scannable utility/settings access, repeat protection, restart/exit cancellation, settings persistence and failure, text layout, and unavailable/error/success browser-speech states.
+GitHub Actions runs the controller checks and the shared browser suite, retaining
+desktop/mobile screenshots. The current controller suite has nine mission,
+narration-fallback, confirmation and storage scenarios. Shared input tests cover
+filtering, holds, cancellation, timing and profile validation. Browser checks
+complete both story paths and verify settings/persistence across all eleven apps.
 
-Physical USB/Bluetooth switch hardware, iOS Safari, Android/TWA, actual installed speech voices/audio output, screen readers, and device rotation still require device testing. Automated mobile viewports are not physical-device validation.
-
-### Results from this implementation session
-
-- Passed: 12 deterministic controller scenarios executed against app.js in a V8 runtime with simulated DOM, input events and timers. Both story branches, all input modes, scan-only help/settings, duplicate keys/clicks, restart/exit, unavailable/error/delayed speech, Tab navigation, panel/visibility pausing, and storage errors were exercised. This is not a rendered-browser test.
-- Passed: mission graph traversal, JavaScript syntax checks, unchanged mission data, bundled artwork provenance, and preservation of the hub's eight prior tile destinations.
-- Blocked: local execution fails before commands launch with `error building bubblewrap command: mountinfo path is not absolute`. Local preview file creation also failed.
-- Blocked: Chromium desktop/mobile suite did not start. GitHub Actions run 36129099183 reports “The job was not started because your account is locked due to a billing issue.” No rendered screenshots or desktop/mobile browser pass is claimed. Run the committed browser suite once a runner is available; retain the PR as draft until then.
+Physical USB/Bluetooth switches, iOS Safari, Android/TWA, actual installed speech
+voices, screen readers and device rotation still require device testing.

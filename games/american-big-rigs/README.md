@@ -1,8 +1,8 @@
 # American Big Rigs — Back It Up
 
 Back a semi-truck and trailer into a loading dock with a single switch. The
-SwitchMate edition is at `/games/american-big-rigs/` and is self-contained in
-`index.html`: no build step, account, network asset, or external dependency.
+SwitchMate edition is at `/games/american-big-rigs/` and uses the repository’s `shared/` access controller: no build step, account,
+remote game asset, or third-party runtime dependency.
 
 Adapted from the local game supplied for this integration on September 30, 2026.
 Original `index.html` SHA-256:
@@ -23,7 +23,8 @@ choice; dragging/scrolling cancels it. Labeled buttons activate their own action
 directly. Click-only assistive input is supported. Held keys and closely repeated
 activations are suppressed. Tab stops automatic scanning for ordinary keyboard
 navigation; a switch press outside a focused button resumes automatic scanning.
-Escape opens the menu; S opens Settings. Neither shortcut is required for play.
+Escape or a long switch hold opens the shared access menu. The visible Switch
+settings button and the scanned game-menu Settings choice open it too.
 
 The motion is a simplified trailer model, not a driving simulator or vocational
 assessment. There is no losing screen. Pull Forward supports recovery when the
@@ -32,43 +33,33 @@ Stars reflect move count, not reaction speed.
 
 ## Settings
 
-- Scan time: 0.8–5.0 seconds, shared by this game's choices and menus.
-- Docks per run: 1–5; a change applies to the next run.
-- Move preview, sounds, and coaching hints: on/off.
+- Keys, scan time, touch area, press filtering, sounds and spoken choices follow
+  the site-wide profile, unless an explicit activity override is enabled.
+- Docks per run (1–5), move preview and coaching hints stay with this game.
+  Dock-count changes apply to the next run.
 
-Settings are saved locally under `switchmate.american-big-rigs.settings.v1`.
-Legacy `abr-cfg` settings can be read and validated. Invalid or unavailable
-storage falls back to defaults. No settings are synced or transmitted.
+Settings now use the versioned shared profile. Existing gameplay options from
+`switchmate.american-big-rigs.settings.v1` or `abr-cfg` are imported once. See
+[Shared switch access](../../docs/switch-access.md) for migration and storage scope.
 
 Menus freeze the current move; Resume completes it once. Leaving the tab pauses
-play, cancels held input, and requires an explicit Resume. Restart and Exit offer
+the shared activity clock and cancels held input. Returning restores the remaining
+activity time. The in-game menu still offers an explicit Resume. Restart and Exit offer
 a scannable cancellation choice. The layout reflows into two columns of choices
 on narrow screens; settings can scroll and keep the highlighted control visible.
 
-Opening this HTML file directly supports standalone play. Return to library
-expects the installed SwitchMate hierarchy; it does not navigate to a remote site.
+Serve the repository over HTTP(S), including `shared/`, to use one profile across
+activities. Return to library expects the installed SwitchMate hierarchy.
 
-## Validation — September 30, 2026
+## Validation
 
-Run from the repository root with Node 22:
+`node tests/american-big-rigs-controller.mjs` runs ten game-controller scenarios,
+including all five docks, recovery from the rear wall/far-left boundary, replay,
+interrupted movement and restart/exit cancellation. Input filtering now belongs
+to `tests/shared-access.mjs`. The full browser suite checks desktop/mobile layouts,
+settings persistence, and opening shared settings during a truck move.
 
-```sh
-node tests/american-big-rigs-controller.mjs
-```
-
-Twelve deterministic scenarios passed in a V8 runtime with simulated DOM, switch
-events, and animation time. They cover all five dock layouts, a recovery route
-from the rear wall and far-left boundary, replay, held/repeated input, interrupted
-moves, switch-only settings/exit, cancellation, saved settings, next-run dock
-count, hidden-tab input cancellation, Tab navigation, dragging, click-only input,
-and corrupt/unavailable storage. This is not rendered-browser testing or a proof
-that arbitrary button-mashing always succeeds.
-
-Separately, the integrated game completed all three default docks using visible
-controls in the Codex browser. Desktop and 390×844 layouts were inspected;
-the narrow layout had no horizontal overflow and settings were readable. No
-JavaScript errors were observed during that run. The hub retains its previous
-ten destinations and adds this game as the eleventh tile.
+See [Shared switch access](../../docs/switch-access.md#checks) for all test commands.
 
 Physical USB/Bluetooth switches, touch hardware, installed audio, screen readers,
 Safari, and Android/WebView remain unverified.
