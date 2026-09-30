@@ -1,6 +1,6 @@
 # SwitchMate / Switch Access — A Project of Best Polity LLC
 
-All 11 activities share one persistent switch-access profile on this browser/device.
+All 12 activities share one persistent switch-access profile on this browser/device.
 Open **Switch settings**, press Escape, or hold your switch to adjust it. Activity
 options and optional access overrides stay separate. See [Shared switch access](docs/switch-access.md)
 for the user guide, profile format, new-activity contract and test commands.
@@ -17,7 +17,7 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 
 - **AAC keyboard** with row-column scanning, word prediction, AI
 - **Calculator** with fractions and percentages
-- **9 games**: Pop It!, Pick One, Tap the Dot, Game Maker, Hellgate, Solitaire, Rift-Signal, Drift-Signal, and American Big Rigs
+- **10 games**: Pop It!, Pick One, Tap the Dot, Game Maker, Hellgate, Solitaire, Rift-Signal, Drift-Signal, American Big Rigs, and Warehouse Forklift
 - **Google sign-in** for feedback; access settings save locally without an account
 
 ## Pages
@@ -36,10 +36,11 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 | `games/rift-signal/` | Branching space adventure |
 | `games/drift-signal/` | Five-gear racing activity |
 | `games/american-big-rigs/` | Single-switch truck docking with move previews |
+| `games/warehouse-forklift/` | Single-switch warehouse pallet pickup and delivery |
 
 ## Shelved staff workflow
 
-The public site focuses on Type, Calc, and the nine games. The staff portal,
+The public site focuses on Type, Calc, and the ten games. The staff portal,
 provider page, participant session runner, and provider demo documents were
 removed from the deployed source. Their last retained version is commit
 `6c8b0439afc283c223bc46ab23b1e904352629f9`; recover the files from Git history

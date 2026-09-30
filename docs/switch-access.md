@@ -1,6 +1,6 @@
 # Shared switch access
 
-All eleven activities, the library and the guided tour use `shared/profile.js`,
+All twelve activities, the library and the guided tour use `shared/profile.js`,
 `shared/switch-access.js` and `shared/switch-access.css`. They require the same
 web origin to share settings; serve the site over HTTP(S), rather than opening
 individual files with `file://`.
@@ -17,7 +17,7 @@ individual files with `file://`.
   changes in that panel affect only the current activity.
 - **Activity options** keeps gameplay choices separate: Solitaire's play style,
   Hellgate's difficulty, Rift's picture dwell/text size, Drift's scan penalty,
-  Type's prediction/character speech/theme, and Rigs' docks/preview/hints.
+  Type's prediction/character speech/theme, Rigs' docks/preview/hints, and Forklift's deliveries/preview/hints.
 - **Test my switch** counts accepted presses without playing. Hold the switch or
   press Escape to leave the test. Buttons also work with touch, mouse and Tab.
 - Tab pauses automatic scanning while native keyboard controls stay available.

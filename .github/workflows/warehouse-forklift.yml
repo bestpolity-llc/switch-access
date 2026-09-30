@@ -1,0 +1,27 @@
+name: Warehouse Forklift controller checks
+on:
+  pull_request:
+    paths:
+      - 'games/warehouse-forklift/**'
+      - 'shared/**'
+      - 'tests/warehouse-forklift-controller.mjs'
+      - '.github/workflows/warehouse-forklift.yml'
+  push:
+    branches: ['main']
+    paths:
+      - 'games/warehouse-forklift/**'
+      - 'shared/**'
+      - 'tests/warehouse-forklift-controller.mjs'
+      - '.github/workflows/warehouse-forklift.yml'
+permissions:
+  contents: read
+jobs:
+  controller:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/warehouse-forklift-controller.mjs
