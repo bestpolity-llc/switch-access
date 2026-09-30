@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="../shared/profile.js?v=20260930-1"></script>
-<script src="../shared/switch-access.js?v=20260930-1"></script>
+<script src="../shared/profile.js?v=20260930-2"></script>
+<script src="../shared/switch-access.js?v=20260930-2"></script>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -93,7 +93,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="../shared/switch-access.css?v=20260930-1">
+<link rel="stylesheet" href="../shared/switch-access.css?v=20260930-2">
 </head>
 <body>
 <div id="stage">
@@ -109,8 +109,8 @@
     <div class="menu" id="menuMainItems"></div>
     <div class="hint">Works with any single switch that sends <b>Space</b>, <b>Enter</b>, a
       <b>mouse click</b>, or a <b>screen tap</b>. Menus scan automatically — press when your
-      choice lights up. Any key on the keyboard also works as the switch.
-      Quick tap = select · hold 2s = back · hold 10s = home.</div>
+      choice lights up. Space and Enter work by default; choose another key in Switch settings.
+      Press and release = select · hold your switch = access menu.</div>
   </div>
 
   <!-- GAME OVER -->
@@ -129,7 +129,7 @@
 /* =========================================================
    HELLGATE — single-switch stop-action corridor shooter
    SwitchMate conventions: quick tap = select/action,
-   hold 2s = back/cancel, hold = shared access menu.
+   hold = shared access menu.
    ========================================================= */
 
 /* ---------- settings (persisted in switchaac_* localStorage) ---------- */

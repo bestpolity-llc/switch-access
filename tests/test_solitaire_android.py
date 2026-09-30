@@ -16,7 +16,7 @@ class SolitaireAndroidIsolationTests(unittest.TestCase):
         self.assertIn('const IS_SOLITAIRE_APP = new URLSearchParams(location.search).get("app") === "1";', source)
         self.assertIn('isolated:IS_SOLITAIRE_APP', source)
         controller=(ROOT / 'shared/switch-access.js').read_text()
-        self.assertIn("!adapter.isolated&&adapter.id!=='library'", controller)
+        self.assertIn('!adapter.isolated && adapter.id !== "library"', controller)
 
 
 if __name__ == "__main__":

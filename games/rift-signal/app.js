@@ -21,9 +21,10 @@ const scene = () => SCENE_MAP[currentId];
 function applySettings() {
   document.body.dataset.mode = settings.mode;
   document.documentElement.style.setProperty("--scale", settings.scale);
+  const keyNames=SwitchAccess.access.keys.filter(k=>k!=='NumpadEnter').map(k=>k.replace(/^Key/,'')).join(' / ');
   $("#modeHint").textContent = settings.mode === "full"
-    ? "Tap anywhere or press Space / Enter"
-    : settings.mode === "bottom" ? "Tap this bottom quarter or press Space / Enter" : "Press Space / Enter on your switch";
+    ? "Tap the background or press " + keyNames
+    : settings.mode === "bottom" ? "Tap this bottom quarter or press " + keyNames : "Press " + keyNames + " on your switch";
 }
 function stopNarration() {
   speakingToken++;

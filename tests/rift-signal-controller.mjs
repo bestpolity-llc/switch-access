@@ -31,7 +31,7 @@ function runControllerChecks(missionSource, artSource, appSource) {
     const setTimeout=(fn,ms)=>{const id=nextTimer++;timers.set(id,{fn,at:time+ms});return id;};
     const clearTimeout=id=>timers.delete(id);
     let adapter,opened=null;
-    const SwitchAccess={clock:{setTimeout,clearTimeout},scanClock:{setTimeout,clearTimeout},storage:localStorage,announce(){},open(page){opened=page;},register(config){adapter=config;const app={};for(const [key,def] of Object.entries(config.settings))app[key]=def.values.includes(config.legacy[key])?config.legacy[key]:def.default;config.apply({scanMs:3000,pointerMode:['full','bottom','external'].includes(saved.mode)?saved.mode:'full',sound:saved.sound===true},app);}};
+    const SwitchAccess={access:{keys:['Space','Enter','NumpadEnter']},clock:{setTimeout,clearTimeout},scanClock:{setTimeout,clearTimeout},storage:localStorage,announce(){},open(page){opened=page;},register(config){adapter=config;const app={};for(const [key,def] of Object.entries(config.settings))app[key]=def.values.includes(config.legacy[key])?config.legacy[key]:def.default;config.apply({scanMs:3000,pointerMode:['full','bottom','external'].includes(saved.mode)?saved.mode:'full',sound:saved.sound===true},app);}};
     Function("SwitchAccess","document","window","localStorage","performance","setTimeout","clearTimeout","location","speechSynthesis","SpeechSynthesisUtterance",
       missionSource.replaceAll("export const","const")+"\n"+artSource.replaceAll("export const","const")+"\n"+appSource.replace(/^import .*;\n/gm,"")
     )(SwitchAccess,document,window,localStorage,{now:()=>time},setTimeout,clearTimeout,{assign:url=>{assigned=url;}},speechSynthesis,Utterance);

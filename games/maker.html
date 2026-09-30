@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="../shared/profile.js?v=20260930-1"></script>
-<script src="../shared/switch-access.js?v=20260930-1"></script>
+<script src="../shared/profile.js?v=20260930-2"></script>
+<script src="../shared/switch-access.js?v=20260930-2"></script>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -129,7 +129,7 @@
     * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   }
 </style>
-<link rel="stylesheet" href="../shared/switch-access.css?v=20260930-1">
+<link rel="stylesheet" href="../shared/switch-access.css?v=20260930-2">
 </head>
 <body>
 <div id="stage"></div>
@@ -146,6 +146,7 @@
     <button class="menu-btn" data-act="new">🎲 Surprise Me!</button>
     <button class="menu-btn" data-act="fav">❤️ Play a Favorite</button>
     <button class="menu-btn" data-act="history">📜 My Games</button>
+    <button class="menu-btn" data-act="settings">⚙ Switch settings</button>
     <button class="menu-btn" data-act="home">🏠 SwitchMate Home</button>
   </div>
 </div>
@@ -159,6 +160,7 @@
     <button class="menu-btn" data-act="love">❤️ Love it!</button>
     <button class="menu-btn" data-act="again">🔁 Play Again</button>
     <button class="menu-btn" data-act="new">🎲 New Game</button>
+    <button class="menu-btn" data-act="settings">⚙ Switch settings</button>
     <button class="menu-btn" data-act="home">🏠 SwitchMate Home</button>
   </div>
 </div>
@@ -170,6 +172,7 @@
   <div id="historyList"></div>
   <div class="menu-opts" style="max-width:480px">
     <button class="menu-btn" data-act="back">⬅ Back</button>
+    <button class="menu-btn" data-act="settings">⚙ Switch settings</button>
     <button class="menu-btn" data-act="home">🏠 SwitchMate Home</button>
   </div>
 </div>
@@ -618,6 +621,7 @@ document.getElementById('menuOpts').addEventListener('click', e => {
   if (act === 'new') newRandomGame();
   else if (act === 'fav') { const f = topFavorite(); f ? playSeed(f.seed) : newRandomGame(); }
   else if (act === 'history') showHistory();
+  else if (act === 'settings') SwitchAccess.open();
   else if (act === 'home') window.location.href = '../index.html';
 });
 document.getElementById('endOpts').addEventListener('click', e => {
@@ -630,11 +634,13 @@ document.getElementById('endOpts').addEventListener('click', e => {
   }
   else if (act === 'again') playSeed(G.seed);
   else if (act === 'new') newRandomGame();
+  else if (act === 'settings') SwitchAccess.open();
   else if (act === 'home') window.location.href = '../index.html';
 });
 document.getElementById('historyOverlay').addEventListener('click', e => {
   const act = e.target.closest('.menu-btn')?.dataset.act;
   if (act === 'back') showMenu();
+  else if (act === 'settings') SwitchAccess.open();
   else if (act === 'home') window.location.href = '../index.html';
 });
 
