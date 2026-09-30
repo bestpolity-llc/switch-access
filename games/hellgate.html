@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="../shared/profile.js?v=20260930-2"></script>
+<script src="../shared/switch-access.js?v=20260930-2"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>SwitchMate — HELLGATE</title>
@@ -90,6 +93,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../shared/switch-access.css?v=20260930-2">
 </head>
 <body>
 <div id="stage">
@@ -105,8 +109,8 @@
     <div class="menu" id="menuMainItems"></div>
     <div class="hint">Works with any single switch that sends <b>Space</b>, <b>Enter</b>, a
       <b>mouse click</b>, or a <b>screen tap</b>. Menus scan automatically — press when your
-      choice lights up. Any key on the keyboard also works as the switch.
-      Quick tap = select · hold 2s = back · hold 10s = home.</div>
+      choice lights up. Space and Enter work by default; choose another key in Switch settings.
+      Press and release = select · hold your switch = access menu.</div>
   </div>
 
   <!-- GAME OVER -->
@@ -125,22 +129,19 @@
 /* =========================================================
    HELLGATE — single-switch stop-action corridor shooter
    SwitchMate conventions: quick tap = select/action,
-   hold 2s = back/cancel, hold 10s = exit to hub.
+   hold = shared access menu.
    ========================================================= */
 
 /* ---------- settings (persisted in switchaac_* localStorage) ---------- */
 const LEVELS = ["SLOW","MEDIUM","FAST"];
 const settings = {
-  sweep: parseInt(localStorage.getItem("switchaac_hg_sweep")||"0",10)||0,
-  scan:  parseInt(localStorage.getItem("switchaac_hg_scan")||"0",10)||0,
-  fury:  parseInt(localStorage.getItem("switchaac_hg_fury")||"0",10)||0,
-  sound: localStorage.getItem("switchaac_hg_sound")!=="0"
+  sweep: parseInt(SwitchAccess.storage.getItem("switchaac_hg_sweep")||"0",10)||0,
+  scan:  parseInt(SwitchAccess.storage.getItem("switchaac_hg_scan")||"0",10)||0,
+  fury:  parseInt(SwitchAccess.storage.getItem("switchaac_hg_fury")||"0",10)||0,
+  sound: SwitchAccess.storage.getItem("switchaac_hg_sound")!=="0"
 };
 function saveSettings(){
-  localStorage.setItem("switchaac_hg_sweep", settings.sweep);
-  localStorage.setItem("switchaac_hg_scan", settings.scan);
-  localStorage.setItem("switchaac_hg_fury", settings.fury);
-  localStorage.setItem("switchaac_hg_sound", settings.sound?"1":"0");
+  SwitchAccess.setApp({sweep:settings.sweep,fury:settings.fury});
 }
 const SWEEP_SPEED = [0.45, 0.75, 1.15];      // radians/sec of the sweep phase
 const SCAN_MS     = [1700, 1200, 800];       // menu highlight dwell
@@ -178,69 +179,10 @@ function onSwitch(fn){ switchHandler = fn; }
 function onBack(fn){ backHandler = fn; }
 let lastPress = 0;
 function pressSwitch(directTarget){
-  const now = performance.now();
-  if(now - lastPress < 140) return;          // debounce key auto-repeat / double events
-  lastPress = now;
-  if(switchHandler) switchHandler(directTarget||null);
+  if(switchHandler)switchHandler(directTarget||null);
 }
 function exitHome(){ window.location.href = "../index.html"; }
 function doBack(){ if(backHandler) backHandler(); }
-
-/* ---------- SwitchMate hold semantics: 2s = back, 10s = hub ---------- */
-let touchStart = 0, holdInt = null, holdFired10 = false;
-const holdFillEl = ()=>document.getElementById("holdFill");
-const holdStatusEl = ()=>document.getElementById("holdStatus");
-document.documentElement.addEventListener("touchstart", function(e){
-  if(touchStart) return;
-  if(e.target.closest && e.target.closest(".mi")) return;  // real buttons stay tappable
-  e.preventDefault();
-  touchStart = Date.now(); holdFired10 = false;
-  holdFillEl().style.width = "0%";
-  holdInt = setInterval(()=>{
-    const elapsed = (Date.now()-touchStart)/1000;
-    holdFillEl().style.width = Math.min(100,(elapsed/10)*100)+"%";
-    if(elapsed >= 10 && !holdFired10){
-      holdFired10 = true; clearInterval(holdInt); holdInt = null;
-      holdFillEl().style.width = "100%";
-      setTimeout(exitHome, 300);
-    } else if(elapsed >= 2){
-      holdStatusEl().textContent = "Hold… (10s = home)";
-      holdStatusEl().classList.add("show");
-    }
-  }, 50);
-}, {passive:false});
-document.documentElement.addEventListener("touchend", function(e){
-  if(!touchStart) return;
-  const elapsed = (Date.now()-touchStart)/1000;
-  touchStart = 0;
-  if(holdInt){ clearInterval(holdInt); holdInt = null; }
-  holdFillEl().style.width = "0%";
-  holdStatusEl().classList.remove("show");
-  if(holdFired10){ holdFired10 = false; return; }
-  if(elapsed >= 2) doBack();
-  else pressSwitch(null);
-}, {passive:true});
-document.documentElement.addEventListener("touchcancel", function(){
-  if(holdInt){ clearInterval(holdInt); holdInt = null; }
-  touchStart = 0; holdFired10 = false;
-  holdFillEl().style.width = "0%";
-  holdStatusEl().classList.remove("show");
-}, {passive:true});
-
-/* ---------- keyboard / pointer input ---------- */
-document.addEventListener("keydown", e=>{
-  if(e.key === "Escape"){ doBack(); return; }
-  if(e.repeat) return;
-  if(["Tab","F5","F11","F12"].includes(e.key)) return;
-  if(e.metaKey||e.ctrlKey||e.altKey) return;
-  e.preventDefault();
-  pressSwitch(null);
-});
-document.addEventListener("pointerdown", e=>{
-  if(e.pointerType === "touch") return;   // handled by touchstart/end
-  const btn = e.target.closest && e.target.closest(".mi");
-  pressSwitch(btn || null);
-});
 
 /* ---------- scanning menu ---------- */
 function makeMenu(containerId, itemDefs){
@@ -248,7 +190,8 @@ function makeMenu(containerId, itemDefs){
   box.innerHTML = "";
   const items = itemDefs.map(def=>{
     const b = document.createElement("button");
-    b.type = "button"; b.className = "mi"; b.tabIndex = -1;
+    b.type = "button"; b.className = "mi"; b.tabIndex = 0;
+    b.addEventListener("click",()=>pressSwitch(b));
     box.appendChild(b);
     return { el:b, def };
   });
@@ -260,13 +203,14 @@ function makeMenu(containerId, itemDefs){
   }
   function paint(){
     items.forEach((it,i)=>{ label(it); it.el.classList.toggle("scan", i===idx); });
+    SwitchAccess.announce(items[idx].el.textContent);
   }
   function advance(){ idx = (idx+1) % items.length; paint(); sfx.scanTick(); }
   return {
     start(){
       idx = 0; paint();
-      clearInterval(timer);
-      timer = setInterval(advance, SCAN_MS[settings.scan]);
+      SwitchAccess.scanClock.clearInterval(timer);
+      timer = SwitchAccess.scanClock.setInterval(advance, SwitchAccess.access.scanMs);
       onSwitch(target=>{
         let it = items[idx];
         if(target){ const hit = items.find(x=>x.el===target); if(hit) it = hit; }
@@ -274,11 +218,11 @@ function makeMenu(containerId, itemDefs){
         it.def.action();
         paint();
         // restart dwell timer & scan rate (may have changed)
-        clearInterval(timer);
-        timer = setInterval(advance, SCAN_MS[settings.scan]);
+        SwitchAccess.scanClock.clearInterval(timer);
+        timer = SwitchAccess.scanClock.setInterval(advance, SwitchAccess.access.scanMs);
       });
     },
-    stop(){ clearInterval(timer); }
+    stop(){ SwitchAccess.scanClock.clearInterval(timer); }
   };
 }
 
@@ -341,7 +285,7 @@ function playSwitch(){
     G.kills++;
     sfx.fireHit();
     if(G.demons.every(d=>!d.alive)){
-      setTimeout(()=>{ if(G.mode==="play"){ G.mode="walk"; G.walkT=0; sfx.waveClear(); } }, 350);
+      SwitchAccess.clock.setTimeout(()=>{ if(G.mode==="play"){ G.mode="walk"; G.walkT=0; sfx.waveClear(); } }, 350);
     }
   } else sfx.fireMiss();
 }
@@ -361,7 +305,7 @@ function damagePlayer(){
 }
 
 /* ---------- update ---------- */
-let prev = performance.now();
+let prev = SwitchAccess.clock.now();
 function update(dt){
   G.torch += dt;
   if(G.mode==="play"){
@@ -563,6 +507,8 @@ function render(){
 
 /* ---------- main loop ---------- */
 function loop(now){
+  now=SwitchAccess.clock.now();
+  if(SwitchAccess.paused){requestAnimationFrame(loop);return;}
   const dt = Math.min((now-prev)/1000, 0.05); prev = now;
   if(G.mode==="play"||G.mode==="walk") { update(dt); render(); }
   requestAnimationFrame(loop);
@@ -587,12 +533,11 @@ const mainMenu = makeMenu("menuMainItems", [
   { text:"FIGHT", action:()=>{ mainMenu.stop(); startGame(); } },
   { text:"CROSSHAIR SPEED", value:()=>LEVELS[settings.sweep],
     action:()=>{ settings.sweep=(settings.sweep+1)%3; saveSettings(); } },
-  { text:"MENU SCAN SPEED", value:()=>LEVELS[settings.scan],
-    action:()=>{ settings.scan=(settings.scan+1)%3; saveSettings(); } },
+  { text:"SWITCH SETTINGS", action:()=>SwitchAccess.open() },
   { text:"DEMON FURY", value:()=>LEVELS[settings.fury],
     action:()=>{ settings.fury=(settings.fury+1)%3; saveSettings(); } },
   { text:"SOUND", value:()=>settings.sound?"ON":"OFF",
-    action:()=>{ settings.sound=!settings.sound; saveSettings(); } },
+    action:()=>{ SwitchAccess.update({sound:!settings.sound}); } },
   { text:"🏠 SwitchMate Home", action:exitHome }
 ]);
 
@@ -605,6 +550,10 @@ const overMenu = makeMenu("menuOverItems", [
 show(menuMainEl);
 mainMenu.start();
 onBack(exitHome);   // Escape / hold-2s at main menu goes home
+
+SwitchAccess.register({id:'hellgate',home:'../index.html',activate:()=>pressSwitch(null),
+  settings:{sweep:{label:'Crosshair speed',values:[0,1,2],default:0,format:v=>LEVELS[v]},fury:{label:'Demon fury',values:[0,1,2],default:0,format:v=>LEVELS[v]}},legacy:settings,
+  apply(a,p){Object.assign(settings,p,{sound:a.sound});},actions:[{label:'Game menu',run:()=>{G.mode='menu';show(menuMainEl);mainMenu.start();}}]});
 </script>
 <script src="../firebase-init.js"></script>
 <script src="../switchmate-tracker.js"></script>

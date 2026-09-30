@@ -6,7 +6,8 @@ function runControllerChecks(missionSource, artSource, appSource) {
     const nodes = new Map(), events = {}, windowEvents = {}, values = new Map();
     values.set("switchmate.rift-signal.settings.v1", typeof saved === "string" ? saved : JSON.stringify({sound:false,...saved}));
     class Element {
-      constructor(id) { this.id=id; this.dataset={}; this.textContent=""; this.hidden=false; this.children=[]; this.attributes={}; this.style={setProperty(){}}; this.className=""; }
+      constructor(id) { this.id=id; this.dataset={}; this.textContent=""; this.hidden=false; this.children=[]; this.attributes={}; this.style={setProperty(){}}; this.className=""; this.events={}; }
+      addEventListener(name,fn){this.events[name]=fn;}
       get classList() { return { toggle: (name, on) => { const all = new Set(this.className.split(" ").filter(Boolean)); if(on) all.add(name); else all.delete(name); this.className=[...all].join(" "); } }; }
       setAttribute(k,v) {this.attributes[k]=v;}
       removeAttribute(k) {delete this.attributes[k];}
@@ -29,16 +30,18 @@ function runControllerChecks(missionSource, artSource, appSource) {
     const localStorage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{if(storageFails)throw Error("denied");values.set(k,v);}};
     const setTimeout=(fn,ms)=>{const id=nextTimer++;timers.set(id,{fn,at:time+ms});return id;};
     const clearTimeout=id=>timers.delete(id);
-    Function("document","window","localStorage","performance","setTimeout","clearTimeout","location","speechSynthesis","SpeechSynthesisUtterance",
+    let adapter,opened=null;
+    const SwitchAccess={access:{keys:['Space','Enter','NumpadEnter']},clock:{setTimeout,clearTimeout},scanClock:{setTimeout,clearTimeout},storage:localStorage,announce(){},open(page){opened=page;},register(config){adapter=config;const app={};for(const [key,def] of Object.entries(config.settings))app[key]=def.values.includes(config.legacy[key])?config.legacy[key]:def.default;config.apply({scanMs:3000,pointerMode:['full','bottom','external'].includes(saved.mode)?saved.mode:'full',sound:saved.sound===true},app);}};
+    Function("SwitchAccess","document","window","localStorage","performance","setTimeout","clearTimeout","location","speechSynthesis","SpeechSynthesisUtterance",
       missionSource.replaceAll("export const","const")+"\n"+artSource.replaceAll("export const","const")+"\n"+appSource.replace(/^import .*;\n/gm,"")
-    )(document,window,localStorage,{now:()=>time},setTimeout,clearTimeout,{assign:url=>{assigned=url;}},speechSynthesis,Utterance);
+    )(SwitchAccess,document,window,localStorage,{now:()=>time},setTimeout,clearTimeout,{assign:url=>{assigned=url;}},speechSynthesis,Utterance);
     const advance=ms=>{const end=time+ms;while(true){const pending=[...timers].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!pending)break;time=pending[1].at;timers.delete(pending[0]);pending[1].fn();}time=end;};
     const fire=(name,extra={},win=false)=>{(win?windowEvents:events)[name]?.({preventDefault(){},...extra});};
     const button=label=>node("controls").children.find(b=>b.textContent===label);
-    const click=label=>{advance(700);const target=button(label);assert(target,"Missing control: "+label);fire("click",{target});};
-    const key=(code="Space")=>{fire("keydown",{code},true);fire("keyup",{code},true);};
+    const click=label=>{advance(700);const target=button(label);assert(target,"Missing control: "+label);target.events.click();};
+    const key=()=>adapter.activate();
     const title=()=>node("sceneTitle").textContent;
-    return {node,document,advance,fire,button,click,key,title,values,utterances,get assigned(){return assigned;}};
+    return {node,document,advance,fire,button,click,key,title,values,utterances,get assigned(){return assigned;},get opened(){return opened;}};
   }
   let passed=0;
   const initial=["BEGIN FIRST SHIFT","CONTINUE","CONTINUE","OPEN CHANNEL","ACCEPT REQUEST","CONTINUE","START CHOICE"];
@@ -52,24 +55,9 @@ function runControllerChecks(missionSource, artSource, appSource) {
     s.click("Restart");s.click("Keep playing");assert(s.title()==="First Shift complete","Cancel restart");
     s.click("Restart");s.click("Yes, restart");assert(s.title()==="Welcome aboard","Confirm restart");passed++;
   }
-  for(const mode of ["full","bottom","external"]){
-    const s=setup({mode});s.fire("keydown",{code:"Space"},true);s.fire("keydown",{code:"Space",repeat:true},true);s.advance(9000);
-    assert(s.title()==="Welcome aboard","Held key must wait for release");
-    s.fire("keyup",{code:"Space"},true);assert(s.title()==="Captain Marcus Vale","Release selects once");
-    s.key();assert(s.title()==="Captain Marcus Vale","Debounce second key");
-    s.advance(700);
-    const target=s.node(mode==="full"?"brand":"switchPad");
-    if(mode==="external")s.key("Enter");
-    else {s.fire("pointerdown",{target,isPrimary:true,button:0,pointerId:1,clientX:10,clientY:10});s.fire("pointerup",{pointerId:1});s.fire("click",{target});}
-    assert(s.title()==="Meet your mentor","Input mode "+mode);
-    s.advance(3000);assert(s.node("padLabel").textContent==="Help","Scan Help");
-    s.key();assert(s.node("panelTitle").textContent==="How to play","Open Help by switch");
-    s.advance(6000);assert(s.node("padLabel").textContent==="Settings","Scan Settings");
-    s.key();s.advance(3000);s.key();
-    assert(JSON.parse(s.values.get("switchmate.rift-signal.settings.v1")).mode!==mode,"Save changed mode");
-    s.click("Picture choice: 8 seconds");s.click("Return to mission");
-    s.click("Exit");s.click("Keep playing");assert(s.title()==="Meet your mentor","Exit cancel");
-    s.click("Exit");s.click("Yes, exit");assert(s.assigned==="../../","Exit target");passed++;
+  {
+    const s=setup();s.click('Settings');assert(s.opened==='activity','Settings delegates to shared panel');
+    s.click('Exit');s.click('Keep playing');assert(s.assigned===null,'Exit cancellation');s.click('Exit');s.click('Yes, exit');assert(s.assigned==='../../','Exit confirmation');passed++;
   }
   for(const speech of ["missing","error","working","silent"]){
     const s=setup({sound:true},speech);s.click("Replay");
@@ -77,17 +65,8 @@ function runControllerChecks(missionSource, artSource, appSource) {
     const status=s.node("audioStatus").textContent;
     assert(speech==="missing"?status.includes("unavailable"):speech==="working"?status.includes("Message complete"):status.includes("did not play"),"Speech fallback "+speech);passed++;
   }
-  {
-    const s=setup({mode:"bottom"});s.fire("pointerdown",{target:s.node("brand"),isPrimary:true,button:0,pointerId:1,clientX:5,clientY:5});s.fire("pointerup",{pointerId:1});
-    assert(s.title()==="Welcome aboard","Outside bottom pad ignored");
-    s.fire("keydown",{key:"Tab"},true);s.advance(30000);assert(s.node("scanStatus").textContent.includes("Keyboard navigation"),"Tab stops scan");
-    s.document.activeElement=s.button("Settings");s.key();assert(s.node("panelTitle").textContent==="Your settings","Tab-selected command");
-    s.click("Return to mission");initial.forEach(s.click);s.click("Settings");s.advance(60000);assert(s.title()==="Blue planet","Panel pauses story");
-    s.click("Return to mission");s.document.hidden=true;s.fire("visibilitychange");s.advance(60000);assert(s.title()==="Blue planet","Hidden pauses choices");
-    s.document.hidden=false;s.fire("visibilitychange");s.advance(8000);assert(s.title()==="Star field","Visible resumes choices");passed++;
-  }
-  {const s=setup("{broken");assert(s.node("body").dataset.mode==="full","Corrupt storage default");passed++;}
-  {const s=setup({}, "missing", true);s.click("Settings");s.click("Input: Full-screen");assert(s.node("saveStatus").textContent.includes("Storage is unavailable"),"Storage denial");passed++;}
+  {const s=setup('{broken');assert(s.node('body').dataset.mode==='full','Corrupt legacy data falls back');passed++;}
+  {const s=setup({},'missing',true);s.click('BEGIN FIRST SHIFT');assert(s.title()==='Captain Marcus Vale','Storage denial cannot block the mission');passed++;}
   return {passed, environment:"V8 controller with simulated DOM/events/timers; not a browser or layout test"};
 }
 

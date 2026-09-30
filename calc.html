@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="shared/profile.js?v=20260930-2"></script>
+<script src="shared/switch-access.js?v=20260930-2"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SwitchMate — Calc</title>
@@ -251,6 +254,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="switchmate-tracker.js"></script>
+<link rel="stylesheet" href="shared/switch-access.css?v=20260930-2">
 </head>
 <body>
 <div class="container">
@@ -268,26 +272,7 @@
 </div>
 
 <button class="help-btn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
-<div class="help-overlay" id="helpOverlay">
-  <div class="help-box">
-    <h2>How To Use</h2>
-    <div class="help-section">
-      <div class="title">👆 Touch (iPad)</div>
-      <div class="help-row"><span class="gesture">👆</span><span class="arrow">→</span><span class="desc">Tap <span class="desc-sub">quick</span></span></div>
-      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">2s</span></span></div>
-      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">10s</span></span></div>
-    </div>
-    <div class="help-section">
-      <div class="title">⌨️ Keyboard</div>
-      <div class="help-row"><span class="gesture">␣/↵</span><span class="arrow">→</span><span class="desc">Select</span></div>
-      <div class="help-row"><span class="gesture">Esc</span><span class="arrow">→</span><span class="desc">Back</span></div>
-    </div>
-    <div style="text-align:center;margin-top:12px">
-      <a href="guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a>
-    </div>
-    <button class="help-close" onclick="hideHelp()" aria-label="Close help">Got it</button>
-  </div>
-</div>
+
 
 <div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
 <div class="hold-status" id="holdStatus"></div>
@@ -393,7 +378,7 @@ function renderGrid() {
       const cls = ['btn', btn.cls];
       if (state.scanMode === 'row' && state.currentRow === r) cls.push('scan-row');
       else if (state.scanMode === 'col' && state.selectedRow === r && state.currentCol === c) cls.push('scan-col');
-      html += `<div class="${cls.join(' ')}" onclick="handleInput('${btn.id}')">${btn.label}</div>`;
+      html += `<button type="button" class="${cls.join(' ')}" onclick="handleInput('${btn.id}')">${btn.label}</button>`;
     }
   }
   grid.innerHTML = html;
@@ -413,7 +398,8 @@ function nextScanStep() {
     state.currentCol = (state.currentCol + 1) % COLS;
   }
   updateUI();
-  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+  SwitchAccess.announce([...document.querySelectorAll('.btn.scan-row,.btn.scan-col')].map(b=>b.textContent).join(', '));
+  state.scanTimer = SwitchAccess.scanClock.setTimeout(nextScanStep, state.scanSpeed);
 }
 
 function startScan() {
@@ -424,12 +410,13 @@ function startScan() {
   state.currentCol = 0;
   state.selectedRow = -1;
   updateUI();
-  state.scanTimer = setTimeout(nextScanStep, state.scanSpeed);
+  SwitchAccess.announce([...document.querySelectorAll('.btn.scan-row,.btn.scan-col')].map(b=>b.textContent).join(', '));
+  state.scanTimer = SwitchAccess.scanClock.setTimeout(nextScanStep, state.scanSpeed);
 }
 
 function stopScan() {
   state.scanning = false;
-  if (state.scanTimer) { clearTimeout(state.scanTimer); state.scanTimer = null; }
+  if (state.scanTimer) { SwitchAccess.scanClock.clearTimeout(state.scanTimer); state.scanTimer = null; }
   updateUI();
 }
 
@@ -687,91 +674,22 @@ function updateUI() {
 }
 
 // ============================================================
-// KEYBOARD INPUT
-// ============================================================
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { window.location.href = 'index.html'; return; }
-  // Any other key = trigger select
-  e.preventDefault();
-  if (!state.scanning) { startScan(); return; }
-  selectCurrent();
-});
-
-// ============================================================
-// FULL-SCREEN TOUCH SWITCH
-// ============================================================
-let touchStart = 0, holdInt = null, holdFired = false;
-const holdExit = 10, holdCancel = 2;
-
-document.documentElement.addEventListener('touchstart', function(e) {
-  if (touchStart) return;
-  if (e.target.closest('.btn') || e.target.closest('.help-overlay')) return;
-  e.preventDefault();
-  touchStart = Date.now(); holdFired = false;
-  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
-  holdInt = setInterval(() => {
-    const elapsed = (Date.now() - touchStart) / 1000;
-    document.getElementById('holdFill').style.width = Math.min(100, (elapsed/holdExit)*100) + '%';
-    const status = document.getElementById('holdStatus');
-    if (elapsed >= holdExit && !holdFired) {
-      holdFired = true; clearInterval(holdInt); holdInt = null;
-      document.getElementById('holdFill').style.width = '100%';
-      status.textContent = '×'; status.classList.add('show');
-      setTimeout(() => { window.location.href = 'index.html'; }, 300);
-    } else if (elapsed >= holdCancel && !holdFired) {
-      status.textContent = 'Hold...'; status.classList.add('show');
-    }
-  }, 50);
-}, { passive: false });
-
-document.documentElement.addEventListener('touchend', function(e) {
-  if (!touchStart) return;
-  const elapsed = (Date.now() - touchStart) / 1000;
-  touchStart = 0;
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
-  fill.style.width = '0%'; status.classList.remove('show');
-  if (holdFired) { holdFired = false; return; }
-  if (elapsed >= holdCancel) {
-    allClear();
-  } else {
-    if (!state.scanning) { startScan(); return; }
-    selectCurrent();
-  }
-}, { passive: true });
-
-document.documentElement.addEventListener('touchcancel', function(e) {
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  touchStart = 0;
-  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
-  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
-}, { passive: true });
-
-// ============================================================
 // HELP
 // ============================================================
-function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
-function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+function showHelp() { SwitchAccess.open(); }
+function hideHelp() { SwitchAccess.close(); }
 
 // ============================================================
 // FIREBASE AUTH — save/load settings
 // ============================================================
-onAuthChange(async (user) => {
-  if (user) {
-    const prefs = await loadFirebasePrefs(user.uid);
-    if (prefs && prefs.scanSpeed) {
-      state.scanSpeed = prefs.scanSpeed;
-      if (state.scanning) { startScan(); }
-    }
-  }
-});
-
 // ============================================================
 // INIT
 // ============================================================
 renderGrid();
 updateDisplay();
 startScan();
+
+SwitchAccess.register({id:'calc',home:'index.html',activate:selectCurrent,apply(a){state.scanSpeed=a.scanMs;if(state.scanning){SwitchAccess.scanClock.clearTimeout(state.scanTimer);state.scanTimer=SwitchAccess.scanClock.setTimeout(nextScanStep,state.scanSpeed);}},actions:[{label:'Clear calculation',run:allClear}]});
 </script>
 </body>
 </html>

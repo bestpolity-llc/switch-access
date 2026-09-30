@@ -32,10 +32,12 @@ function runRigsChecks(html) {
     const location={set href(url){assigned=url;}};
     const window={location,addEventListener:(n,cb)=>{winEvents[n]=cb;}};
     const storage={getItem:k=>{if(storageFails)throw Error('denied');return stored.get(k)??null;},setItem:(k,v)=>{if(storageFails)throw Error('denied');stored.set(k,v);}};
-    Function('window','document','localStorage','performance','requestAnimationFrame','setTimeout','clearTimeout',source)(window,document,storage,{now:()=>now},cb=>{frame=cb;},()=>0,()=>{});
+    let adapter,opened=null;
+    const SwitchAccess={storage,clock:{now:()=>now,setTimeout:()=>0,clearTimeout(){}},paused:false,manual:false,announce(){},open(page){opened=page;},register(config){adapter=config;const app={};for(const [key,def] of Object.entries(config.settings))app[key]=def.values.includes(config.legacy[key])?config.legacy[key]:def.default;config.apply({scanMs:2000,sound:false},app);}};
+    Function('SwitchAccess','window','document','localStorage','performance','requestAnimationFrame','setTimeout','clearTimeout',source)(SwitchAccess,window,document,storage,{now:()=>now},cb=>{frame=cb;},()=>0,()=>{});
     const advance=ms=>{now+=ms;frame(now);};
     const event=(name,extra={},doc=false)=>{(doc?docEvents:winEvents)[name]?.({target:document.body,preventDefault(){},...extra});};
-    const key=()=>{event('keydown',{code:'Space',key:' '});event('keyup',{code:'Space',key:' '});};
+    const key=()=>adapter.activate();
     const choices=()=>node('choices').children;
     const buttons=()=>node('menuActions').children;
     const selectMenu=label=>{
@@ -52,7 +54,7 @@ function runRigsChecks(html) {
       key();
     };
     const clickMenu=label=>{advance(500);const b=buttons().find(b=>b.textContent===label);assert(b,'Missing '+label);b.events.click({target:b});};
-    return {api:window.__abr,node,document,advance,event,key,selectMenu,selectMove,clickMenu,choices,buttons,stored,get assigned(){return assigned;}};
+    return {shared:SwitchAccess,get opened(){return opened;},api:window.__abr,node,document,advance,event,key,selectMenu,selectMove,clickMenu,choices,buttons,stored,get assigned(){return assigned;}};
   }
   // Beam search uses the real pure movement function; execution uses switch events.
   function route(api,start) {
@@ -88,13 +90,6 @@ function runRigsChecks(html) {
     s.selectMenu('Play again');assert(s.api.G.round===0 && s.api.G.steps===0,'Replay resets run');passed++;
   }
   {
-    const s=setup({sound:false});
-    s.event('keydown',{code:'Space',key:' '});s.event('keydown',{code:'Space',key:' ',repeat:true});s.advance(12000);
-    assert(s.api.G.phase==='paused','Held switch does not start or repeat');
-    s.event('keyup',{code:'Space',key:' '});assert(s.api.G.phase==='scan','Release starts once');
-    s.key();assert(s.api.G.steps===0,'Duplicate activation suppressed');passed++;
-  }
-  {
     const s=setup({sound:false});s.selectMenu('Start driving');s.selectMove(2);s.advance(200);
     const before={...s.api.G.st};s.node('menuButton').events.click();s.advance(30000);
     assert(s.api.G.st.y===before.y && s.api.G.phase==='paused','Menu pauses moving truck');
@@ -102,13 +97,8 @@ function runRigsChecks(html) {
     assert(s.api.G.steps===1 && s.api.G.st.y<before.y && s.api.G.phase==='scan','Interrupted move resumes exactly once');passed++;
   }
   {
-    const s=setup({sound:false});s.selectMenu('Start driving');s.selectMove(6);
-    s.selectMenu('Settings');s.selectMenu('Slower: 2.0 seconds');
-    assert(s.api.CFG.scanMs===2200,'Switch changes speed');
-    s.selectMenu('Docks next run: 3');assert(s.api.CFG.rounds===4 && s.api.G.rounds===3,'Dock count changes next run only');
-    assert(JSON.parse(s.stored.get('switchmate.american-big-rigs.settings.v1')).scanMs===2200,'Preferences saved');
-    s.selectMenu('Back');s.selectMenu('Return to library');s.selectMenu('Stay here');assert(s.assigned===null,'Exit cancellation');
-    s.selectMenu('Return to library');s.selectMenu('Leave game');assert(s.assigned==='../../','Switch exits to library');passed++;
+    const s=setup({sound:false});s.selectMenu('Settings');assert(s.opened==='activity','Game settings delegate to shared menu');
+    s.selectMenu('Return to library');s.selectMenu('Stay here');assert(s.assigned===null,'Exit cancellation');s.selectMenu('Return to library');s.selectMenu('Leave game');assert(s.assigned==='../../','Exit target');passed++;
   }
   {
     const s=setup({sound:false});s.selectMenu('Start driving');s.selectMove(2);s.advance(700);s.selectMove(6);
@@ -116,27 +106,15 @@ function runRigsChecks(html) {
     s.selectMenu('Restart run');s.selectMenu('Restart');assert(s.api.G.steps===0,'Confirmed restart resets');passed++;
   }
   {
-    const s=setup({sound:false});s.selectMenu('Start driving');s.event('keydown',{code:'Space',key:' '});
-    s.document.hidden=true;s.event('visibilitychange',{},true);s.advance(60000);
-    s.document.hidden=false;s.event('visibilitychange',{},true);s.event('keyup',{code:'Space',key:' '});
-    assert(s.api.G.phase==='paused' && s.api.G.steps===0,'Hidden tab cancels held press and pauses');passed++;
+    const s=setup({sound:false});s.selectMenu('Start driving');s.shared.manual=true;s.advance(60000);assert(s.api.G.hl===0,'Manual navigation does not advance choices');passed++;
   }
   {
-    const s=setup({sound:false});s.event('keydown',{key:'Tab'});s.advance(60000);
-    assert(!s.buttons().some(b=>b.attrs['aria-current']),'Tab disables automatic scan');
-    s.clickMenu('Start driving');s.advance(10000);assert(s.api.G.hl===0,'Keyboard navigation pauses game scanning');passed++;
-  }
-  {
-    const s=setup({sound:false});const target=s.node('accessMenu');
-    s.event('pointerdown',{target,isPrimary:true,button:0,pointerId:1,clientX:10,clientY:10},true);
-    s.event('pointermove',{pointerId:1,clientX:10,clientY:50},true);s.event('pointerup',{pointerId:1},true);
-    assert(s.api.G.phase==='paused','Scrolling cannot start game');
-    s.event('click',{target,detail:0},true);assert(s.api.G.phase==='scan','Click-only assistive input starts game');passed++;
+    const s=setup({sound:false});s.selectMenu('Start driving');s.shared.paused=true;s.advance(60000);assert(s.api.G.hl===0,'Shared access menu pauses game loop');passed++;
   }
   for(const saved of ['{bad',{scanMs:-1,rounds:999,preview:'bad',sound:false},undefined]) {
     const s=setup(saved,saved===undefined);
     assert(s.api.CFG.scanMs>=800 && s.api.CFG.scanMs<=5000 && s.api.CFG.rounds<=5 && typeof s.api.CFG.preview==='boolean','Safe settings defaults');
-    s.selectMenu('Settings');s.clickMenu('Slower: '+(s.api.CFG.scanMs/1000).toFixed(1)+' seconds');passed++;
+    s.selectMenu('Settings');assert(s.opened==='activity','Settings remain reachable');passed++;
   }
   {
     const s=setup({sound:false});s.selectMenu('Start driving');

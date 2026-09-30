@@ -1,14 +1,23 @@
 # Drift-Signal: First Run
 
-A complete static single-switch gear-sequencing game for SwitchMate. Entry: `/games/drift-signal/`. No build, accounts, analytics, remote media, or dependencies. Deploy this folder unchanged under `games/`; the library return link resolves to the site root. Open `index.html` directly for standalone play (the library link only applies when hosted under `games/`).
+A static single-switch gear-sequencing game for SwitchMate. Entry: `/games/drift-signal/`.
+Serve the repository over HTTP(S), including its `shared/` directory. No build or
+account is required. The library link resolves to the site root.
 
 ## Play
 
-Scanning begins automatically. Space/Enter select on release, or tap the large selection pad. All choices can also be activated directly. Start, settings, gear choices, Pause, Resume, replay, restart confirmation and exit confirmation participate in scanning. Tab suspends scanning for ordinary keyboard navigation; the pad resumes it. Escape pauses. Hidden tabs/window blur pause the race without accruing penalties. Repeating/held keys select at most once, with a 450ms duplicate-activation guard.
+Scanning begins automatically. The shared profile controls keys, scan time,
+press filtering and touch area. Space/Enter select on release by default;
+a hold or Escape opens the shared access menu. Labeled controls work directly.
+Tab pauses scanning; the shared Resume switch scanning control restores it.
+Hidden tabs and the access menu pause activity time without accruing penalties.
 
 Five correct selections move from neutral through gears 1–5, then automatically across the finish line to a distinct post-finish image. Wrong selections retain the current gear and allow recovery.
 
-Scan dwell options: 1.5, 2.5 (default), 4, 6 seconds. Optional spoken choices use browser speech with visible text always present. Settings are validated and persisted in `switchmate.drift-signal.settings.v1`; unavailable/corrupt storage does not block play. Scanning only runs while visible/focused. Physical USB/Bluetooth switches should be mapped to Space or Enter.
+Access preferences follow the player between all activities. Spoken choices are
+optional. The extra-scan penalty is an activity option, imported from the previous
+local settings and stored separately in the shared profile. See
+[Shared switch access](../../docs/switch-access.md) for storage, overrides and input rules.
 
 ## Score
 
@@ -24,7 +33,9 @@ Seven original AI-generated frames created with the built-in image generation to
 
 ## Integration
 
-The accompanying hub change adds a tenth, automatically scanned library tile without changing existing game destinations. No changes are made to the separate Rift-Signal space adventure, Android manifests, account integration, or other game settings.
+This is one of the library's eleven activities. Its adapter registers as
+`drift-signal`; scan timers use the shared scan clock and race transitions use
+the shared activity clock.
 
 ## Validation
 

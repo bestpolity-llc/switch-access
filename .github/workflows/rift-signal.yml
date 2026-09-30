@@ -1,13 +1,15 @@
-name: Rift-Signal browser checks
+name: SwitchMate shared access and activity checks
 on:
   pull_request:
     paths:
-      - 'games/rift-signal/**'
-      - 'tests/rift-signal*.mjs'
+      - 'games/**'
+      - 'shared/**'
+      - 'tests/**'
       - '.github/workflows/rift-signal.yml'
-      - 'index.html'
+      - '*.html'
+      - 'firebase-init.js'
   push:
-    branches: ['codex/rift-signal-switchmate']
+    branches: ['main']
 permissions:
   contents: read
 jobs:
@@ -20,6 +22,9 @@ jobs:
         with:
           node-version: '22'
       - run: node tests/rift-signal-controller.mjs
+      - run: node tests/shared-access.mjs
+      - run: node tests/american-big-rigs-controller.mjs
+      - run: python3 -m unittest discover -s tests -p 'test_*.py'
       - run: npm install --prefix work/rift-tests playwright@1.51.1
       - run: work/rift-tests/node_modules/.bin/playwright install --with-deps chromium
       - run: node tests/rift-signal.mjs

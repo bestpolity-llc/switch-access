@@ -1,0 +1,138 @@
+#sa-toolbar {
+  position: fixed;
+  right: 10px;
+  top: 8px;
+  z-index: 10001;
+  display: flex;
+  gap: 6px;
+  font:
+    16px/1.3 system-ui,
+    sans-serif;
+}
+#sa-toolbar button {
+  min-height: 44px;
+  padding: 8px 13px;
+  background: #102a38;
+  color: #fff;
+  border: 2px solid #b5e0ed;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+}
+#sa-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 18px;
+  border: 0;
+  box-sizing: border-box;
+  background: #081c2bf5;
+  color: #fff;
+  z-index: 2147483647;
+  overflow: auto;
+  font:
+    18px/1.5 system-ui,
+    sans-serif;
+  text-align: left;
+  touch-action: pan-y;
+}
+#sa-dialog:not([open]) {
+  display: none;
+}
+#sa-content {
+  max-width: 720px;
+  margin: auto;
+  padding-bottom: 20px;
+}
+#sa-dialog h1 {
+  font-size: 1.6rem;
+  line-height: 1.2;
+  margin: 10px 0;
+}
+#sa-dialog p {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #d7e9f0;
+  margin: 12px 0;
+}
+#sa-options {
+  display: grid;
+  gap: 10px;
+}
+#sa-options button {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 2px solid #7394a4;
+  background: #163749;
+  color: white;
+  text-align: left;
+  white-space: normal;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: none;
+  transform: none;
+}
+#sa-options button.sa-current,
+#sa-options button:focus-visible {
+  outline: 4px solid #ffe078;
+  outline-offset: 1px;
+  background: #294d63;
+  color: #fff;
+}
+#sa-dialog button:disabled {
+  opacity: 0.6;
+}
+#sa-status {
+  min-height: 1.5em;
+}
+#sa-resume[hidden] {
+  display: none;
+}
+body.sa-paused * {
+  animation-play-state: paused !important;
+}
+body.sa-external #switchPad,
+body.sa-external #appSwitchBtn {
+  display: none;
+}
+html:has(#sa-dialog[open]),
+body:has(#sa-dialog[open]) {
+  touch-action: pan-y pinch-zoom !important;
+}
+#keyboard {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+#keyboard .key {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#keyboard .utility {
+  font-size: clamp(0.72rem, 2.8vw, 1rem);
+  padding: 8px 2px;
+}
+body.sa-manual .scan,
+body.sa-manual .scan-highlight,
+body.sa-manual .scan-focus {
+  outline-style: dashed;
+}
+@media (max-width: 600px) {
+  #sa-toolbar {
+    top: auto;
+    bottom: 8px;
+    right: 8px;
+  }
+  #sa-toolbar button {
+    font-size: 14px;
+    padding: 8px;
+  }
+  #sa-dialog {
+    padding: 14px;
+  }
+}

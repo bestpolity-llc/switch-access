@@ -3,12 +3,14 @@ on:
   pull_request:
     paths:
       - 'games/american-big-rigs/**'
+      - 'shared/**'
       - 'tests/american-big-rigs-controller.mjs'
       - '.github/workflows/american-big-rigs.yml'
   push:
     branches: ['main']
     paths:
       - 'games/american-big-rigs/**'
+      - 'shared/**'
       - 'tests/american-big-rigs-controller.mjs'
       - '.github/workflows/american-big-rigs.yml'
 permissions:

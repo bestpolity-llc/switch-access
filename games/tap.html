@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="../shared/profile.js?v=20260930-2"></script>
+<script src="../shared/switch-access.js?v=20260930-2"></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SwitchMate — Tap the Dot</title>
@@ -192,6 +195,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../shared/switch-access.css?v=20260930-2">
 </head>
 <body>
 <div class="game-area">
@@ -216,26 +220,9 @@
   </div>
 </div>
 
-<button class="help-btn" id="helpBtn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
 
-<div class="help-overlay" id="helpOverlay">
-  <div class="help-box">
-    <h2>How To Use</h2>
-    <div class="help-section">
-      <div class="title">👆 Touch (iPad)</div>
-      <div class="help-row"><span class="gesture">👆</span><span class="arrow">→</span><span class="desc">Tap <span class="desc-sub">quick</span></span></div>
-      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">2s</span></span></div>
-      <div class="help-row"><span class="gesture">✋</span><span class="arrow">→</span><span class="desc">Hold <span class="desc-sub">10s</span></span></div>
-    </div>
-    <div class="help-section">
-      <div class="title">⌨️ Keyboard</div>
-      <div class="help-row"><span class="gesture">␣/↵</span><span class="arrow">→</span><span class="desc">Select</span></div>
-      <div class="help-row"><span class="gesture">Esc</span><span class="arrow">→</span><span class="desc">Back</span></div>
-    </div>
-    <div style="text-align:center;margin-top:12px"><a href="../guide.html" style="display:inline-block;padding:10px 24px;background:#4A7BC4;color:#fff;border-radius:60px;text-decoration:none;font-weight:700;font-size:0.95rem;touch-action:manipulation">▶️ Start Guided Tour</a></div>
-    <button class="help-close" onclick="hideHelp()" aria-label="Close help">Got it</button>
-  </div>
-</div>
+
+
 
 <div class="hold-bar" id="holdBar"><div class="hold-fill" id="holdFill"></div></div>
 <div class="hold-status" id="holdStatus"></div>
@@ -282,11 +269,11 @@ function showDot() {
   function tickRing() {
     elapsed += tick;
     ring.style.strokeDashoffset = 282.7 * (1 - Math.min(elapsed/duration, 1));
-    if (elapsed < duration && dotVisible) fadeTimer = setTimeout(tickRing, tick);
+    if (elapsed < duration && dotVisible) fadeTimer = SwitchAccess.clock.setTimeout(tickRing, tick);
   }
-  fadeTimer = setTimeout(tickRing, tick);
+  fadeTimer = SwitchAccess.clock.setTimeout(tickRing, tick);
 
-  dotTimer = setTimeout(() => { if (dotVisible) missDot(); }, duration);
+  dotTimer = SwitchAccess.clock.setTimeout(() => { if (dotVisible) missDot(); }, duration);
 }
 
 function missDot() {
@@ -296,7 +283,7 @@ function missDot() {
   document.getElementById('dot').className = 'dot miss';
   streak = 0;
   document.getElementById('statusText').textContent = 'Miss! 😅';
-  setTimeout(() => { document.getElementById('dot').style.display = 'none'; nextRound(); }, 500);
+  SwitchAccess.clock.setTimeout(() => { document.getElementById('dot').style.display = 'none'; nextRound(); }, 500);
 }
 
 function tapDot() {
@@ -312,10 +299,10 @@ function tapDot() {
     c.textContent = `🔥 ${streak}x!`; c.style.left = '50%'; c.style.top = '50%';
     c.style.transform = 'translate(-50%,-50%)';
     document.getElementById('playArea').appendChild(c);
-    setTimeout(() => c.remove(), 900);
+    SwitchAccess.clock.setTimeout(() => c.remove(), 900);
   }
 
-  setTimeout(() => {
+  SwitchAccess.clock.setTimeout(() => {
     document.getElementById('dot').style.display = 'none';
     nextRound();
   }, 400);
@@ -325,7 +312,7 @@ function nextRound() {
   round++;
   if (round > TOTAL) { endGame(); return; }
   document.getElementById('statusText').textContent = `Round ${round}/${TOTAL}...`;
-  setTimeout(() => { if (gameActive) showDot(); }, rng(800, 2500));
+  SwitchAccess.clock.setTimeout(() => { if (gameActive) showDot(); }, rng(800, 2500));
 }
 
 function endGame() {
@@ -341,8 +328,8 @@ function endGame() {
 }
 
 function clearTimers() {
-  if (dotTimer) { clearTimeout(dotTimer); dotTimer = null; }
-  if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
+  if (dotTimer) { SwitchAccess.clock.clearTimeout(dotTimer); dotTimer = null; }
+  if (fadeTimer) { SwitchAccess.clock.clearTimeout(fadeTimer); fadeTimer = null; }
 }
 
 function handleAction() {
@@ -350,59 +337,10 @@ function handleAction() {
   tapDot();
 }
 
-// Touch switch
-let touchStart = 0, holdInt = null, holdFired = false;
-document.documentElement.addEventListener('touchstart', function(e) {
-  if (touchStart) return;
-  e.preventDefault();
-  touchStart = Date.now(); holdFired = false;
-  const fill = document.getElementById('holdFill'); fill.style.width = '0%';
-  holdInt = setInterval(() => {
-    const elapsed = (Date.now() - touchStart) / 1000;
-    document.getElementById('holdFill').style.width = Math.min(100, (elapsed/10)*100) + '%';
-    if (elapsed >= 10 && !holdFired) {
-      holdFired = true; clearInterval(holdInt); holdInt = null;
-      document.getElementById('holdFill').style.width = '100%';
-      document.getElementById('holdStatus').textContent = '×'; document.getElementById('holdStatus').classList.add('show');
-      setTimeout(() => { window.location.href = '../index.html'; }, 300);
-    } else if (elapsed >= 2 && !holdFired) {
-      document.getElementById('holdStatus').textContent = 'Hold...'; document.getElementById('holdStatus').classList.add('show');
-    }
-  }, 50);
-}, { passive: false });
+function showHelp() { SwitchAccess.open(); }
+function hideHelp() { SwitchAccess.close(); }
 
-document.documentElement.addEventListener('touchend', function(e) {
-  if (!touchStart) return;
-  const elapsed = (Date.now() - touchStart) / 1000;
-  touchStart = 0;
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  const fill = document.getElementById('holdFill'); const status = document.getElementById('holdStatus');
-  fill.style.width = '0%'; status.classList.remove('show');
-  if (holdFired) { holdFired = false; return; }
-  if (elapsed >= 2) {
-    gameActive = false; clearTimers();
-    document.getElementById('gameContent').style.display = 'none';
-    document.getElementById('startScreen').style.display = 'block';
-  } else {
-    handleAction();
-  }
-}, { passive: true });
-
-document.documentElement.addEventListener('touchcancel', function(e) {
-  if (holdInt) { clearInterval(holdInt); holdInt = null; }
-  touchStart = 0;
-  const fill = document.getElementById('holdFill'); if (fill) fill.style.width = '0%';
-  const status = document.getElementById('holdStatus'); if (status) status.classList.remove('show');
-}, { passive: true });
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { window.location.href = '../index.html'; return; }
-  e.preventDefault();
-  handleAction();
-});
-
-function showHelp() { document.getElementById('helpOverlay').classList.add('show'); }
-function hideHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+SwitchAccess.register({id:'tap',home:'../index.html',activate:handleAction,actions:[{label:'Start again',run:startGame}]});
 </script>
 <script src="../firebase-init.js"></script>
 <script src="../switchmate-tracker.js"></script>

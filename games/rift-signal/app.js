@@ -7,7 +7,7 @@ const DEFAULTS = { mode: "full", scan: 3000, choice: 8000, sound: true, scale: 1
 const OPTIONS = { mode: ["full", "bottom", "external"], scan: [2000, 3000, 5000, 8000], choice: [5000, 8000, 12000, 20000], scale: [1, 1.2, 1.4] };
 let settings = { ...DEFAULTS };
 try {
-  const saved = JSON.parse(localStorage.getItem(KEY));
+  const saved = JSON.parse(SwitchAccess.storage.getItem(KEY));
   for (const key of Object.keys(OPTIONS)) if (OPTIONS[key].includes(saved?.[key])) settings[key] = saved[key];
   if (typeof saved?.sound === "boolean") settings.sound = saved.sound;
 } catch { /* Storage may be blocked; the mission still works. */ }
@@ -21,18 +21,14 @@ const scene = () => SCENE_MAP[currentId];
 function applySettings() {
   document.body.dataset.mode = settings.mode;
   document.documentElement.style.setProperty("--scale", settings.scale);
+  const keyNames=SwitchAccess.access.keys.filter(k=>k!=='NumpadEnter').map(k=>k.replace(/^Key/,'')).join(' / ');
   $("#modeHint").textContent = settings.mode === "full"
-    ? "Tap anywhere or press Space / Enter"
-    : settings.mode === "bottom" ? "Tap this bottom quarter or press Space / Enter" : "Press Space / Enter on your switch";
-}
-function save() {
-  applySettings();
-  try { localStorage.setItem(KEY, JSON.stringify(settings)); $("#saveStatus").textContent = "Settings saved on this device."; }
-  catch { $("#saveStatus").textContent = "Storage is unavailable. Settings apply until you close this page."; }
+    ? "Tap the background or press " + keyNames
+    : settings.mode === "bottom" ? "Tap this bottom quarter or press " + keyNames : "Press " + keyNames + " on your switch";
 }
 function stopNarration() {
   speakingToken++;
-  clearTimeout(speechTimer);
+  SwitchAccess.clock.clearTimeout(speechTimer);
   try { window.speechSynthesis?.cancel(); } catch {}
 }
 function narrate(text = scene().narration, role = scene().role) {
@@ -54,11 +50,11 @@ function narrate(text = scene().narration, role = scene().role) {
     const voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
     const voice = voices.find(v => v.localService) || voices[0];
     if (voice) utterance.voice = voice;
-    utterance.onstart = () => { if (token === speakingToken) { clearTimeout(speechTimer); $("#audioStatus").textContent = "Narration playing."; } };
-    utterance.onend = () => { if (token === speakingToken) { clearTimeout(speechTimer); $("#audioStatus").textContent = "Message complete. Select Replay to hear it again."; } };
-    utterance.onerror = () => { if (token === speakingToken) { clearTimeout(speechTimer); unavailable(); } };
+    utterance.onstart = () => { if (token === speakingToken) { SwitchAccess.clock.clearTimeout(speechTimer); $("#audioStatus").textContent = "Narration playing."; } };
+    utterance.onend = () => { if (token === speakingToken) { SwitchAccess.clock.clearTimeout(speechTimer); $("#audioStatus").textContent = "Message complete. Select Replay to hear it again."; } };
+    utterance.onerror = () => { if (token === speakingToken) { SwitchAccess.clock.clearTimeout(speechTimer); unavailable(); } };
     $("#audioStatus").textContent = "Starting narration…";
-    speechTimer = setTimeout(unavailable, 5000);
+    speechTimer = SwitchAccess.clock.setTimeout(unavailable, 5000);
     speechSynthesis.speak(utterance);
   } catch { unavailable(); }
 }
@@ -87,12 +83,12 @@ function renderStory() {
     : s.end ? "Your first shift is complete. Replay, restart, or exit whenever you are ready." : "Select the highlighted control when you are ready. There is no time limit.";
   visual(s);
 }
-function clearScan() { clearTimeout(timer); }
+function clearScan() { SwitchAccess.scanClock.clearTimeout(timer); }
 function schedule() {
   clearScan();
   if (manual || document.hidden) return;
   const delay = commands[scanIndex]?.choice ? settings.choice : settings.scan;
-  timer = setTimeout(() => {
+  timer = SwitchAccess.scanClock.setTimeout(() => {
     if (keyHeld || pointer) { schedule(); return; }
     scanIndex = (scanIndex + 1) % commands.length;
     highlight();
@@ -113,6 +109,7 @@ function highlight() {
     renderStory();
   }
   $("#padLabel").textContent = command.label;
+  SwitchAccess.announce(command.label);
   $("#scanStatus").textContent = manual ? "Keyboard navigation: Tab to a control, then Space or Enter." : "Highlighted: " + command.label;
 }
 function utilityCommands() {
@@ -139,6 +136,7 @@ function mount(next, index = 0) {
     button.type = "button";
     button.textContent = command.label;
     button.dataset.command = i;
+    button.addEventListener("click",()=>activate(i));
     if (command.primary) button.className = "primary";
     return button;
   }));
@@ -160,14 +158,8 @@ function render({ speak = true } = {}) {
   mount([...actions, ...utilityCommands()], s.id === "choose_stars" ? 1 : 0);
   if (speak) narrate();
 }
-function cycle(key) {
-  const options = OPTIONS[key];
-  settings[key] = options[(options.indexOf(settings[key]) + 1) % options.length];
-  save();
-  const index = scanIndex;
-  openPanel("settings", index);
-}
 function openPanel(name, index = 0) {
+  if(name==="settings"){SwitchAccess.open("activity");return;}
   stopNarration();
   panel = name;
   $("#mission").hidden = true;
@@ -177,20 +169,8 @@ function openPanel(name, index = 0) {
   let title, copy, actions;
   if (name === "help") {
     title = "How to play";
-    copy = "<p>You are the Asterion’s Signal Operator. Read or listen to each message, then make a choice.</p><p>The gold outline moves through every control. Press once when the control you want is highlighted. All choices repeat; waiting never loses the mission.</p><p>Full-screen mode: tap anywhere to select the highlighted control. Bottom-quarter mode: use the large pad at the bottom. External-switch mode: use a switch that sends Space or Enter. You can always tap a labeled control directly.</p><p>Settings lets you change input mode, scan speed, picture-choice time, narration, and text size using the same switch. Tab pauses scanning for ordinary keyboard navigation. Escape opens Help or returns to the mission.</p><p>Replay repeats the current message. Restart and Exit ask you to confirm. The mission pauses while these pages are open or the browser is hidden.</p>";
+    copy = "<p>You are the Asterion’s Signal Operator. Read or listen to each message, then make a choice.</p><p>The gold outline moves through every control. Press once when the control you want is highlighted. All choices repeat; waiting never loses the mission.</p><p>Full-screen mode: tap anywhere to select the highlighted control. Bottom-quarter mode: use the large pad at the bottom. External-switch mode: use a switch that sends Space or Enter. You can always tap a labeled control directly.</p><p>Settings lets you change input mode, scan speed, picture-choice time, narration, and text size using the same switch. Tab pauses scanning for ordinary keyboard navigation. Escape opens the shared access menu. Hold your switch to open it too.</p><p>Replay repeats the current message. Restart and Exit ask you to confirm. The mission pauses while these pages are open or the browser is hidden.</p>";
     actions = [back, { label: "Read help aloud", run: () => narrate($("#panelCopy").textContent, "ship") }, { label: "Settings", run: () => openPanel("settings") }];
-  } else if (name === "settings") {
-    title = "Your settings";
-    copy = "<p>Select a setting to cycle through its options. Changes save automatically on this device. All input modes accept Space and Enter. Picture-choice time applies to each picture’s highlighted turn.</p>";
-    actions = [
-      back,
-      { label: "Input: " + modeNames[settings.mode], run: () => cycle("mode") },
-      { label: "Control scan: " + settings.scan / 1000 + " seconds", run: () => cycle("scan") },
-      { label: "Picture choice: " + settings.choice / 1000 + " seconds", run: () => cycle("choice") },
-      { label: "Narration: " + (settings.sound ? "on" : "off"), run: () => { settings.sound = !settings.sound; save(); openPanel("settings", scanIndex); } },
-      { label: "Text: " + Math.round(settings.scale * 100) + "%", run: () => cycle("scale") },
-      { label: "Reset settings", run: () => { settings = { ...DEFAULTS }; save(); openPanel("settings"); } }
-    ];
   } else {
     const restart = name === "restart";
     title = restart ? "Restart First Shift?" : "Exit to SwitchMate?";
@@ -209,60 +189,16 @@ function selected(target) {
   return direct ? Number(direct.dataset.command) : scanIndex;
 }
 function activate(index, version = generation) {
-  if (document.hidden || version !== generation || performance.now() - lastInput < 650) return;
+  if (document.hidden || version !== generation) return;
   const command = commands[index];
   if (!command) return;
   lastInput = performance.now();
   command.run();
 }
-function surfaceAllowed(target) {
-  return !!target.closest("button[data-command],#switchPad") || settings.mode === "full";
-}
-// One pointer stream handles touch, pen and mouse. Compatibility clicks are suppressed.
-document.addEventListener("pointerdown", event => {
-  if (!event.isPrimary || event.button !== 0 || !surfaceAllowed(event.target)) return;
-  pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, index: selected(event.target), version: generation };
-});
-document.addEventListener("pointermove", event => {
-  if (pointer?.id === event.pointerId && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 15) pointer.cancelled = true;
-});
-document.addEventListener("pointerup", event => {
-  if (pointer?.id !== event.pointerId) return;
-  const press = pointer;
-  pointer = null;
-  suppressClickUntil = performance.now() + 700;
-  if (!press.cancelled) activate(press.index, press.version);
-});
-document.addEventListener("pointercancel", () => { pointer = null; suppressClickUntil = performance.now() + 700; });
-document.addEventListener("click", event => {
-  if (performance.now() < suppressClickUntil) { event.preventDefault(); return; }
-  // Native / assistive-technology clicks have no pointer stream.
-  if (event.target.closest("button[data-command],#switchPad")) activate(selected(event.target));
-});
-window.addEventListener("keydown", event => {
-  if (event.key === "Tab") { manual = true; clearScan(); highlight(); return; }
-  if (event.key === "Escape" && !event.repeat) { event.preventDefault(); if (panel) render(); else openPanel("help"); return; }
-  if (!["Space", "Enter", "NumpadEnter"].includes(event.code)) return;
-  event.preventDefault();
-  if (event.repeat || keyHeld) return;
-  keyHeld = { code: event.code, index: manual ? selected(document.activeElement) : scanIndex, version: generation };
-});
-window.addEventListener("keyup", event => {
-  if (!["Space", "Enter", "NumpadEnter"].includes(event.code)) return;
-  event.preventDefault();
-  if (!keyHeld || keyHeld.code !== event.code) return;
-  const press = keyHeld;
-  keyHeld = null;
-  suppressClickUntil = performance.now() + 700;
-  activate(press.index, press.version);
-});
-window.addEventListener("blur", () => { keyHeld = null; pointer = null; clearScan(); stopNarration(); });
-window.addEventListener("focus", () => { schedule(); });
-document.addEventListener("visibilitychange", () => {
-  keyHeld = null; pointer = null;
-  if (document.hidden) { clearScan(); stopNarration(); }
-  else { highlight(); schedule(); $("#audioStatus").textContent = "Select Replay to hear the current message."; }
-});
-window.addEventListener("pagehide", () => { clearScan(); stopNarration(); });
 applySettings();
 render({ speak: false });
+
+SwitchAccess.register({id:'rift-signal',home:'../../',activate:()=>activate(scanIndex),
+ settings:{choice:{label:'Picture choice time',values:[2000,3000,5000,8000,12000,20000],default:8000,format:v=>v/1000+' seconds'},scale:{label:'Text size',values:[1,1.2,1.4],default:1,format:v=>Math.round(v*100)+'%'}},legacy:settings,
+ apply(a,p){Object.assign(settings,p,{scan:a.scanMs,mode:a.pointerMode,sound:a.sound});if(!a.sound)stopNarration();applySettings();schedule();}
+});

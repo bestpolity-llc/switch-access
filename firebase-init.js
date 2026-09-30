@@ -10,10 +10,16 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "391623099063"
 };
 
-firebase.initializeApp(FIREBASE_CONFIG);
-const AUTH = firebase.auth();
-const DB = firebase.firestore();
-const GOOGLE_PROVIDER = new firebase.auth.GoogleAuthProvider();
+// Switch access must remain usable if the optional account SDK is offline.
+let AUTH = null, DB = null, GOOGLE_PROVIDER = null;
+try {
+  if (window.firebase) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    AUTH = firebase.auth();
+    DB = firebase.firestore();
+    GOOGLE_PROVIDER = new firebase.auth.GoogleAuthProvider();
+  }
+} catch (error) { console.debug('Account services unavailable:', error.message); }
 
 // ============================================================
 // AUTH
@@ -26,12 +32,13 @@ function onAuthChange(callback) {
   if (currentUser !== null) callback(currentUser);
 }
 
-AUTH.onAuthStateChanged(user => {
+AUTH?.onAuthStateChanged(user => {
   currentUser = user;
   authListeners.forEach(cb => cb(user));
 });
 
 async function signIn() {
+  if (!AUTH) return;
   // Try popup first (fast, good UX on desktop)
   // Falls back to redirect (works on iPad where popups are blocked)
   try {
@@ -52,7 +59,7 @@ async function signIn() {
 
 // Handle redirect result (after Google sends user back)
 (function() {
-  try { AUTH.getRedirectResult(); } catch(e) {}
+  try { AUTH?.getRedirectResult().catch(() => {}); } catch(e) {}
 })();
 
 async function signOut() {
