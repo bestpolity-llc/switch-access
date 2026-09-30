@@ -23,7 +23,7 @@ async function open(page){await page.locator('#sa-toolbar').getByRole('button',{
 async function settings(page,local=false){await open(page);await click(page,'Switch settings · '+(local?'this activity':'site default'));}
 async function press(page,key='Space',duration=40){await page.clock.runFor(300);await page.keyboard.down(key);await page.clock.runFor(duration);await page.keyboard.up(key);}
 async function title(page,text){assert.equal(await page.locator('#sceneTitle').textContent(),text);}
-async function noOverflow(page){assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');}
+async function noOverflow(page){assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow at '+page.url());}
 try{
   for(const width of [1440,390]){
     const {page,context,errors}=await session(width);await page.goto(origin+'/');await settings(page);await click(page,'Scan time: 2 seconds');
@@ -73,7 +73,7 @@ try{
   // AAC utility row, arithmetic and start/pause/resume in the six simpler games.
   {
     const {page,context,errors}=await session();await page.goto(origin+'/keyboard.html');await page.locator('#keyboard').getByRole('button',{name:'h',exact:true}).click();await page.locator('#keyboard').getByRole('button',{name:'i',exact:true}).click();assert.equal(await page.locator('#textDisplay').textContent(),'hi');
-    await page.clock.runFor(12000);assert.ok((await page.locator('#keyboard .scan-row').allTextContents()).includes('Speak message'),'utility row is scanned');await press(page);assert.equal(await page.locator('#keyboard .scan-col').textContent(),'Speak message');await open(page);await page.clock.runFor(9000);await click(page,'Continue activity');assert.equal(await page.locator('#textDisplay').textContent(),'hi');
+    await page.clock.runFor(12000);assert.ok((await page.locator('#keyboard .scan-row').allTextContents()).includes('Speak'),'utility row is scanned');await press(page);assert.equal(await page.locator('#keyboard .scan-col').getAttribute('aria-label'),'Speak message');await open(page);await page.clock.runFor(9000);await click(page,'Continue activity');assert.equal(await page.locator('#textDisplay').textContent(),'hi');
     await page.goto(origin+'/calc.html');for(const label of ['2','+','3','='])await page.locator('#grid button').filter({hasText:new RegExp('^'+label.replace('+','\\+')+'$')}).click();assert.equal(await page.locator('#result').textContent(),'5');
     for(const app of ['pop','tap','choose','maker','hellgate','solitaire']){await page.goto(origin+'/games/'+app+'.html');await press(page);await open(page);await page.clock.runFor(10000);await click(page,'Continue activity');}
     assert.deepEqual(errors,[]);await context.close();count++;

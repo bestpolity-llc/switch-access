@@ -13,5 +13,9 @@
 #sa-resume[hidden]{display:none}
 body.sa-paused *{animation-play-state:paused!important}
 body.sa-external #switchPad,body.sa-external #appSwitchBtn{display:none}
+html:has(#sa-dialog[open]),body:has(#sa-dialog[open]){touch-action:pan-y pinch-zoom!important}
+#keyboard{grid-template-columns:repeat(6,minmax(0,1fr))}
+#keyboard .key{min-width:0;overflow-wrap:anywhere}
+#keyboard .utility{font-size:clamp(.72rem,2.8vw,1rem);padding:8px 2px}
 body.sa-manual .scan,body.sa-manual .scan-highlight,body.sa-manual .scan-focus{outline-style:dashed}
 @media(max-width:600px){#sa-toolbar{top:auto;bottom:8px;right:8px}#sa-toolbar button{font-size:14px;padding:8px}#sa-dialog{padding:14px}}

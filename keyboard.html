@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="shared/profile.js"></script>
-<script src="shared/switch-access.js"></script>
+<script src="shared/profile.js?v=20260930-1"></script>
+<script src="shared/switch-access.js?v=20260930-1"></script>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -551,7 +551,7 @@
 <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="switchmate-tracker.js"></script>
-<link rel="stylesheet" href="shared/switch-access.css">
+<link rel="stylesheet" href="shared/switch-access.css?v=20260930-1">
 </head>
 <body>
 
@@ -582,7 +582,7 @@
   <div class="keyboard" id="keyboard"></div>
 </div>
 
-<button class="help-btn" id="helpBtn" onclick="showHelp()" aria-label="Help" title="Help">?</button>
+
 
 
 
@@ -656,25 +656,29 @@ function getPredictions(prefix, maxResults = 3) {
 // ============================================================
 // RENDER
 // ============================================================
+let shownPredictions=[];
 function renderKeyboard() {
+  const focusKey=SwitchAccess.manual?document.activeElement?.dataset?.keyPosition:null;
   const kb=document.getElementById('keyboard');
   kb.replaceChildren();
   const rows=[...LAYERS[state.layer].keys.map(row=>row.map(ch=>({label:ch,run:()=>pressKey(ch)}))),
     [{label:'⌫',run:doBackspace},{label:'Space',run:()=>typeChar(' ')},{label:'Enter',run:()=>typeChar('\n')},{label:'Settings',run:openSettings}],
     utilityKeys()];
   rows.forEach((row,r)=>row.forEach((item,c)=>{
-    const button=document.createElement('button');button.type='button';button.className='key';button.textContent=item.label;
-    if(r===layerRows()&&c===1)button.classList.add('space');
+    const button=document.createElement('button');button.type='button';button.className='key';button.textContent=item.short||item.label;button.setAttribute('aria-label',item.label);button.dataset.keyPosition=r+':'+c;
+    button.style.gridRow=r+1;
+    if(r===layerRows()&&(c===1||c===3))button.classList.add('space');
+    if(r>layerRows())button.classList.add('utility');
     button.classList.toggle('scan-row',state.scanMode==='row'&&state.currentRow===r);
     button.classList.toggle('scan-col',state.scanMode==='col'&&state.selectedRow===r&&state.currentCol===c);
-    button.addEventListener('click',item.run);kb.append(button);
+    button.addEventListener('click',item.run);kb.append(button);if(button.dataset.keyPosition===focusKey)button.focus({preventScroll:true});
   }));
 }
 
 function utilityKeys(){
-  const words=getPredictions(getCurrentWord(),3);
-  return [{label:'Speak message',run:speakText},{label:'Change keyboard',run:()=>{const layers=Object.keys(LAYERS);switchLayer(layers[(layers.indexOf(state.layer)+1)%layers.length]);}},
-    ...[0,1,2].map(i=>({label:words[i]||'No prediction',run:()=>{if(words[i])acceptPrediction(words[i]);}})),{label:'Switch settings',run:()=>SwitchAccess.open()}];
+  const words=shownPredictions;
+  return [{label:'Speak message',short:'Speak',run:speakText},{label:'Change keyboard',short:'Layout',run:()=>{const layers=Object.keys(LAYERS);switchLayer(layers[(layers.indexOf(state.layer)+1)%layers.length]);}},
+    ...[0,1,2].map(i=>({label:words[i]||'No prediction',short:words[i]||'—',run:()=>{if(words[i])acceptPrediction(words[i]);}})),{label:'Switch settings',short:'Access',run:()=>SwitchAccess.open()}];
 }
 function layerRows() { return LAYERS[state.layer].rows; }
 function layerCols() { return LAYERS[state.layer].cols; }
@@ -783,13 +787,14 @@ function getCurrentWord() {
   return matches ? matches[1] : '';
 }
 
-function updatePredictions() {
-  const container = document.getElementById('predictions');
-  const preds = getPredictions(getCurrentWord(), 3);
-  container.innerHTML = preds.map((w, i) =>
-    `<div class="pred-btn" onclick="acceptPrediction('${w}')">${w}</div>`
-  ).join('');
+function renderPredictions(words,ai=false){
+  shownPredictions=words.slice(0,3);
+  document.getElementById('predictions').replaceChildren(...shownPredictions.map(word=>{
+    const button=document.createElement('button');button.type='button';button.className='pred-btn';button.textContent=word+(ai?' · AI':'');button.addEventListener('click',()=>acceptPrediction(word));return button;
+  }));
+  renderKeyboard();
 }
+function updatePredictions(){renderPredictions(getPredictions(getCurrentWord(),3));}
 
 function acceptPrediction(word) {
   const prefix = getCurrentWord();
@@ -873,12 +878,7 @@ async function checkAiPrediction() {
   const prefix = getCurrentWord();
   if (!prefix || prefix.length < 1) return;
   const aiWords = await aiGetPredictions(prefix);
-  if (aiWords && aiWords.length > 0) {
-    const container = document.getElementById('predictions');
-    container.innerHTML = aiWords.map(w =>
-      `<div class="pred-btn" onclick="acceptPrediction('${w}')">${w} <span class="badge">AI</span></div>`
-    ).join('');
-  }
+  if (aiWords && aiWords.length > 0 && prefix===getCurrentWord() && state.aiEnabled) renderPredictions(aiWords,true);
 }
 
 initBuiltInAI();
@@ -889,7 +889,7 @@ initBuiltInAI();
 function speakText() {
   if (!state.text.trim()) return;
   try { Predictor.learn(state.text); } catch (e) {}
-  if ('speechSynthesis' in window) {
+  if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(state.text);
     u.rate = 0.9;
@@ -898,7 +898,7 @@ function speakText() {
 }
 function speakChar(ch) {
   if(!SwitchAccess.access.sound)return;
-  if ('speechSynthesis' in window) {
+  if (window.speechSynthesis) {
     const u = new SpeechSynthesisUtterance(ch === ' ' ? 'space' : ch);
     u.rate = 0.9; u.volume = 0.3;
     window.speechSynthesis.speak(u);
@@ -963,7 +963,7 @@ function hideHelp() { SwitchAccess.close(); }
 // INIT
 // ============================================================
 loadSettings();
-renderKeyboard();
+updatePredictions();
 updateText();
 startScan();
 
@@ -971,7 +971,7 @@ SwitchAccess.register({id:'type',home:'index.html',activate:selectCurrent,
   settings:{aiEnabled:{label:'AI word prediction',values:[false,true],default:false},speakOnType:{label:'Speak typed characters',values:[false,true],default:false},dark:{label:'Dark theme',values:[false,true],default:false}},
   legacy:{aiEnabled:SwitchAccess.storage.getItem('switchaac_ai')==='1',speakOnType:SwitchAccess.storage.getItem('switchaac_speak')==='1',dark:SwitchAccess.storage.getItem('switchaac_dark')==='1'},
   apply(a,p){state.scanSpeed=a.scanMs;state.aiEnabled=p.aiEnabled;state.speakOnType=p.speakOnType;document.body.classList.toggle('dark',p.dark);if(state.aiEnabled&&!aiSession)createAISession();if(!state.aiEnabled&&aiSession)destroyAISession();if(state.scanning){SwitchAccess.scanClock.clearTimeout(state.scanTimer);state.scanTimer=SwitchAccess.scanClock.setTimeout(nextScanStep,a.scanMs);}updateUI();},
-  actions:[{label:'Speak message',run:speakText}]
+  actions:[{label:'Speak message',short:'Speak',run:speakText}]
 });
 </script>
 

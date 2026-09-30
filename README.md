@@ -18,7 +18,7 @@ This repository remains the independently deployed SwitchMate / Switch Access im
 - **AAC keyboard** with row-column scanning, word prediction, AI
 - **Calculator** with fractions and percentages
 - **9 games**: Pop It!, Pick One, Tap the Dot, Game Maker, Hellgate, Solitaire, Rift-Signal, Drift-Signal, and American Big Rigs
-- **Google sign-in** to sync settings and send feedback
+- **Google sign-in** for feedback; access settings save locally without an account
 
 ## Pages
 
@@ -46,13 +46,13 @@ removed from the deployed source. Their last retained version is commit
 when revisiting that separate workflow.
 
 This removal does not delete Firebase records or change the shared Firestore
-rules. Authentication, preference sync, and feedback for the public tools remain.
+rules. Authentication and feedback for the public tools remain. Switch access preferences now use the local shared profile.
 
 ## Touch Controls (iPad)
 
-- **Quick tap** = select / action
-- **Hold ~2s** = cancel / go back
-- **Hold ~10s** = exit to hub
+- **Press and release** = select / action (Space and Enter work by default)
+- **Hold ~2s** = shared access menu (hold time is configurable)
+- **Return to library** in the access menu = confirmed exit to the hub
 
 ## Support
 
