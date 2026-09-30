@@ -31,6 +31,7 @@ h1 span { color:var(--blue); }
 .btn-hellgate { border-top:5px solid #9d3026; }
 .btn-solitaire { border-top:5px solid #226847; }
 .btn-drift { border-top:5px solid #b87915; }
+.btn-rigs { border-top:5px solid #bf4936; }
 .btn-maker { border-top:5px solid #7253a3; }
 @media (hover:hover) { .btn:hover { transform:translateY(-3px); box-shadow:0 6px 18px #10244312; } }
 .btn.scan-highlight { border-color:var(--navy)!important; outline:4px solid var(--gold); outline-offset:3px; box-shadow:0 0 0 8px white!important; transform:none; }

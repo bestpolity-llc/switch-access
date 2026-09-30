@@ -1,0 +1,25 @@
+name: American Big Rigs controller checks
+on:
+  pull_request:
+    paths:
+      - 'games/american-big-rigs/**'
+      - 'tests/american-big-rigs-controller.mjs'
+      - '.github/workflows/american-big-rigs.yml'
+  push:
+    branches: ['main']
+    paths:
+      - 'games/american-big-rigs/**'
+      - 'tests/american-big-rigs-controller.mjs'
+      - '.github/workflows/american-big-rigs.yml'
+permissions:
+  contents: read
+jobs:
+  controller:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/american-big-rigs-controller.mjs
