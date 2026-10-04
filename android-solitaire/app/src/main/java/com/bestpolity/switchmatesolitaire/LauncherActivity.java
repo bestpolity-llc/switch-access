@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import java.io.ByteArrayInputStream;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -39,11 +41,23 @@ public class LauncherActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if (StandalonePrivacy.shouldBlock(uri.getHost(), uri.getPath())) {
+                    return new WebResourceResponse("text/plain", "UTF-8",
+                            new ByteArrayInputStream(new byte[0]));
+                }
+                return super.shouldInterceptRequest(view, request);
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 if ("switch.bestpolity.com".equals(uri.getHost())
                         && uri.getPath() != null
-                        && uri.getPath().startsWith("/games/solitaire.html")) {
+                        && uri.getPath().equals("/games/solitaire.html")
+                        && "https".equals(uri.getScheme())
+                        && "1".equals(uri.getQueryParameter("app"))) {
                     return false;
                 }
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));

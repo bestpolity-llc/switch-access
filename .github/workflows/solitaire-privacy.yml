@@ -1,0 +1,44 @@
+name: Solitaire standalone privacy
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: node tests/solitaire-privacy.mjs
+      - run: node tests/usage-analytics.mjs
+      - run: node tests/shared-access.mjs
+      - run: python -m unittest discover -s tests -p 'test_solitaire*.py'
+      - run: |
+          mkdir -p /tmp/solitaire-privacy
+          javac -d /tmp/solitaire-privacy android-solitaire/app/src/main/java/com/bestpolity/switchmatesolitaire/StandalonePrivacy.java tests/StandalonePrivacyTest.java
+          java -cp /tmp/solitaire-privacy com.bestpolity.switchmatesolitaire.StandalonePrivacyTest
+      - run: npm install --prefix work/rift-tests playwright@1.51.1
+      - run: work/rift-tests/node_modules/.bin/playwright install --with-deps chromium
+      - run: node tests/solitaire-privacy-browser.mjs
+      - run: node tests/shared-access-browser.mjs
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - run: bash android-solitaire/gradlew -p android-solitaire :app:assembleDebug :app:lintDebug --console=plain

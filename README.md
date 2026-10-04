@@ -76,13 +76,15 @@ the same upload key.
 
 ### Solitaire-only Play app
 
-A separate TWA project in `android-solitaire/` opens only
-`/games/solitaire.html`.
+The embedded WebView project in `android-solitaire/` opens only
+`/games/solitaire.html?app=1`.
 
 - App name: SwitchMate Solitaire
 - Package ID: `com.bestpolity.switchmatesolitaire`
-- Version: `1.0.0` (`versionCode` 1)
+- Version: `1.0.3` (`versionCode` 5)
 - Its upload key is separate and remains outside this repository.
+- Standalone mode does not load Firebase or GA4, regardless of analytics preferences.
+- Identity evidence and verification: [standalone privacy notes](android-solitaire/PRIVACY.md).
 
 ## License
 
