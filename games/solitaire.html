@@ -235,11 +235,8 @@ body:not(.solitaire-app) .app-only { display: none !important; }
   .stacked.up-off { margin-top: -92%; }
 }
 </style>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 <link rel="stylesheet" href="../shared/switch-access.css?v=20260930-2">
-<script defer src="../switchmate-tracker.js?v=20261004-1"></script>
+<script defer src="../shared/solitaire-services.js?v=20261004-2"></script>
 </head>
 <body>
 <div class="app-toolbar app-only" id="appToolbar">
@@ -805,6 +802,5 @@ SwitchAccess.register({id:'solitaire',isolated:IS_SOLITAIRE_APP,home:'../index.h
  actions:[{label:'Deal a new game',run:()=>runMove({type:'newgame'})}]
 });
 </script>
-<script src="../firebase-init.js"></script>
 </body>
 </html>

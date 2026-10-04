@@ -7,7 +7,7 @@ function browser(path = '/games/drift-signal/', pref = null, host = 'switch.best
   const events = {}, scripts = [];
   const c = {location:{pathname:path, hostname:host, origin:'https://'+host},
     document:{referrer:'https://example.org/private?email=secret',createElement:()=>({}),head:{appendChild:s=>scripts.push(s)}},
-    localStorage:{getItem:()=>pref}, URL, Date, addEventListener:(n,f)=>events[n]=f};
+    localStorage:{getItem:()=>pref}, URL, URLSearchParams, Date, addEventListener:(n,f)=>events[n]=f};
   c.window=c;vm.createContext(c);vm.runInContext(source,c);
   return {c,events,scripts,set:v=>pref=v,commands:()=>Array.from(c.dataLayer||[],a=>Array.from(a))};
 }
@@ -38,7 +38,7 @@ const paths=['index.html','guide.html','keyboard.html','calc.html',
  ...['pop','choose','tap','maker','hellgate','solitaire'].map(p=>`games/${p}.html`),
  ...['rift-signal','drift-signal','american-big-rigs','warehouse-forklift'].map(p=>`games/${p}/index.html`)];
 for(const path of paths){const html=fs.readFileSync(new URL(path,root),'utf8');
- assert.equal((html.match(/src="[^"]*switchmate-tracker\.js/g)||[]).length,1,path);
+ assert.equal((html.match(/src="[^"]*switchmate-tracker\.js/g)||[]).length,path === 'games/solitaire.html' ? 0 : 1,path);
  assert(!html.includes('googletagmanager.com/gtag/js'),path);
  assert.equal(browser('/'+path).scripts.length,1,path);
  for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)){if(!m[0].includes('application/ld+json'))new vm.Script(m[1],{filename:path});}

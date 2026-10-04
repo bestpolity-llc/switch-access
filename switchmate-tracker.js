@@ -24,6 +24,8 @@
   const page = pages[path];
   let initialized = false, viewed = false;
   const allowed = () => {
+    // Standalone privacy cannot be overridden by a shared browser preference.
+    if (new URLSearchParams(location.search).get('app') === '1') return false;
     if (location.hostname !== 'switch.bestpolity.com' || !page) return false;
     try {
       const storage = window.SwitchAccess?.storage || window.localStorage;

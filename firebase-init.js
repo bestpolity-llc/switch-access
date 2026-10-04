@@ -13,7 +13,7 @@ const FIREBASE_CONFIG = {
 // Switch access must remain usable if the optional account SDK is offline.
 let AUTH = null, DB = null, GOOGLE_PROVIDER = null;
 try {
-  if (window.firebase) {
+  if (new URLSearchParams(location.search).get("app") !== "1" && window.firebase) {
     firebase.initializeApp(FIREBASE_CONFIG);
     AUTH = firebase.auth();
     DB = firebase.firestore();
