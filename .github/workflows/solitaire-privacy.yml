@@ -40,5 +40,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - run: bash android-solitaire/gradlew -p android-solitaire :app:assembleDebug :app:lintDebug --console=plain
