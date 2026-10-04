@@ -280,27 +280,6 @@
   }
   .help-close:active { background: #555; }
 
-  /* === AUTH === */
-  .auth-bar { position: fixed; top: 12px;
-    right: 12px; z-index: 50; }
-  .auth-btn {
-    padding: 6px 16px; background: #fff; border: 2px solid #d0ccc0;
-    border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: #555;
-    cursor: pointer; touch-action: manipulation;
-    display: none; align-items: center; gap: 6px;
-  }
-  .auth-btn.show { display: inline-flex; }
-  .auth-btn:active { background: #f0ede5; }
-  .auth-note {
-    position: fixed; top: 68px;
-    right: 12px; z-index: 50;
-    font-size: 0.65rem; color: #B0A8A0; text-align: right;
-    max-width: 160px; line-height: 1.3; display: none;
-  }
-  .auth-note.show { display: block; }
-  .auth-btn .avatar { width: 22px; height: 22px; border-radius: 50%; }
-  .auth-btn.signed-in { background: #4A7BC4; color: #fff; border-color: #4A7BC4; }
-
   /* === DEDICATION === */
   .dedication-section {
     max-width: 500px;
@@ -371,7 +350,7 @@
   .feedback-close { background: #e0dcd0; color: #555; }
   .feedback-close:active { background: #d5d1c5; }
   .feedback-status { text-align: center; color: #43a047; font-weight: 600; font-size: 0.95rem; margin-top: 8px; min-height: 24px; }
-  .feedback-signed-out { text-align: center; color: #999; font-size: 0.9rem; margin-bottom: 12px; }
+  .feedback-note { text-align: center; color: #999; font-size: 0.9rem; margin-bottom: 12px; }
 
   /* === WELCOME BANNER === */
   .welcome-banner {
@@ -408,17 +387,13 @@
 
 <header class="site-header">
   <div class="brand-lockup"><img src="switchmate-mark.svg" width="60" height="32" alt=""><span>SwitchMate</span></div>
-  <div class="auth-bar">
-    <button class="auth-btn" id="authBtn" onclick="handleAuth()"><span id="authLabel">Sign in</span></button>
-    <div class="auth-note" id="authNote">Switch settings save on this device. Sign in to send feedback.</div>
-  </div>
 </header>
 
 <!-- Feedback Modal -->
 <div class="feedback-overlay" id="feedbackOverlay">
   <div class="feedback-box">
     <h3>💬 Send a message</h3>
-    <div id="feedbackSignedOut" class="feedback-signed-out">Signed in users can send messages directly to the developer.</div>
+    <div class="feedback-note">Send a message directly to the developer. No account needed.</div>
     <textarea id="feedbackMessage" placeholder="Ideas, questions, suggestions..." maxlength="2000"></textarea>
     <div class="feedback-row">
       <button class="feedback-send" onclick="submitFeedback()">Send</button>
@@ -643,36 +618,6 @@ if (switchModeOn) {
 function showHelp() { SwitchAccess.open(); }
 function hideHelp() { SwitchAccess.close(); }
 
-// ============================================================
-// AUTH
-// ============================================================
-let authUser = null;
-function updateAuthUI(user) {
-  const btn = document.getElementById('authBtn');
-  const label = document.getElementById('authLabel');
-  const note = document.getElementById('authNote');
-  authUser = user;
-  if (user) {
-    btn.classList.add('show', 'signed-in');
-    note.classList.remove('show');
-    label.innerHTML = user.photoURL
-      ? `<img class="avatar" src="${user.photoURL}" alt=""> ${user.displayName || 'Signed in'}`
-      : (user.displayName || 'Signed in');
-    document.getElementById('feedbackSignedOut').style.display = 'none';
-  } else {
-    btn.classList.remove('signed-in');
-    label.textContent = 'Sign in';
-    btn.classList.add('show');
-    note.classList.add('show');
-    document.getElementById('feedbackSignedOut').style.display = 'block';
-  }
-}
-function handleAuth() {
-  if (authUser) AUTH.signOut();
-  else signIn();
-}
-onAuthChange(updateAuthUI);
-
 // === FEEDBACK ===
 function openFeedback() {
   document.getElementById('feedbackOverlay').classList.add('show');
@@ -688,7 +633,7 @@ async function submitFeedback() {
   }
   document.getElementById('feedbackStatus').textContent = 'Sending...';
   document.getElementById('feedbackStatus').style.color = '#999';
-  const ok = await sendFeedback(authUser ? authUser.uid : null, authUser ? authUser.displayName : null, authUser ? authUser.email : null, msg, 'hub');
+  const ok = await sendFeedback(null, null, null, msg, 'hub');
   if (ok) {
     document.getElementById('feedbackStatus').textContent = '✅ Sent! Thank you.';
     document.getElementById('feedbackStatus').style.color = '#43a047';
