@@ -112,6 +112,7 @@
       try {
         storage.setItem(key, String(value));
       } catch {}
+      if (key === "switchaac_analytics") window.SwitchMateAnalytics?.refresh();
     },
     removeItem(key) {
       legacyMemory.delete(key);

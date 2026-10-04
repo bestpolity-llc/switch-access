@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <script src="../shared/profile.js?v=20260930-2"></script>
-<script src="../shared/switch-access.js?v=20260930-2"></script>
+<script src="../shared/switch-access.js?v=20261004-1"></script>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -130,6 +130,7 @@
   }
 </style>
 <link rel="stylesheet" href="../shared/switch-access.css?v=20260930-2">
+<script defer src="../switchmate-tracker.js?v=20261004-1"></script>
 </head>
 <body>
 <div id="stage"></div>
@@ -283,17 +284,9 @@ function recordLove(g) {
   if (item) { item.loves++; saveHistory(h); }
   logEvent('love', g);
 }
-// Global event feed → Firestore (same pipeline as switchmate-tracker)
+// Optional popularity events; never attach account details or generated text.
 function logEvent(type, g) {
-  try {
-    if (SwitchAccess.storage.getItem('switchaac_analytics') === '0') return;
-    if (typeof DB === 'undefined') return;
-    DB.collection('game_maker_events').add({
-      type, seed: g.seed, name: g.name, mechanic: g.mechanic, theme: g.theme.name,
-      uid: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : null,
-      ts: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  } catch (e) {}
+  window.SwitchMateAnalytics?.makerEvent(type, g.seed);
 }
 function topFavorite() {
   const h = loadHistory().filter(x => x.loves > 0);
@@ -658,6 +651,5 @@ showMenu();
 SwitchAccess.register({id:'maker',home:'../index.html',activate:primaryAction,actions:[{label:'Choose another game',run:showMenu}]});
 </script>
 <script src="../firebase-init.js"></script>
-<script src="../switchmate-tracker.js"></script>
 </body>
 </html>
